@@ -1,0 +1,9 @@
+# Pinned for ROS 2 Jazzy compatibility.
+# numpy<2: cv_bridge is built against numpy 1.x
+# setuptools<80: required by colcon-core
+# opencv-python-headless: no display in container; ignore ultralytics'
+#   opencv-python warning, headless provides the same cv2 module
+numpy==1.26.4
+setuptools==79.0.1
+opencv-python-headless==4.11.0.86
+ultralytics==8.4.146

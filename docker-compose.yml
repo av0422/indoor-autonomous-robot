@@ -1,0 +1,30 @@
+services:
+  ros:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: indoor-bot:jazzy
+    container_name: indoor-bot
+    platform: linux/arm64
+    stdin_open: true
+    tty: true
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./src:/ws/src
+      - ./docs:/ws/docs
+      - ./results:/ws/results
+      - ./data:/ws/data
+      - ws-build:/ws/build
+      - ws-install:/ws/install
+      - ws-log:/ws/log
+      - venv:/ws/.venv
+    environment:
+      - ROS_DOMAIN_ID=42
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
+volumes:
+  ws-build:
+  ws-install:
+  ws-log:
+  venv:
