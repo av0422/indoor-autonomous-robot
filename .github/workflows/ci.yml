@@ -2,26 +2,38 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
-    container: ros:jazzy
+    container:
+      image: ros:jazzy
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: rosdep update
-        run: rosdep update
+      - name: Install dependencies
+        run: |
+          apt-get update
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src -y --ignore-src
 
-      - name: rosdep install
-        run: rosdep install --from-paths src -y --ignore-src
+      - name: Build
+        run: |
+          . /opt/ros/jazzy/setup.sh
+          colcon build --symlink-install
 
-      - name: colcon build
-        run: colcon build --symlink-install
+      - name: Test
+        run: |
+          . /opt/ros/jazzy/setup.sh
+          colcon test
 
-      - name: colcon test
-        run: colcon test
-
-      - name: colcon test-result
-        run: colcon test-result --verbose
+      - name: Test results
+        if: always()
+        run: |
+          . /opt/ros/jazzy/setup.sh
+          colcon test-result --verbose
