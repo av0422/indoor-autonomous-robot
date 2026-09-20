@@ -3,11 +3,11 @@ project(indoor_bot_interfaces)
 
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
-# msg/ and action/ are intentionally empty placeholders — no interfaces
-# defined yet. rosidl_generate_interfaces() with no files still produces
-# a valid, empty generated package.
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "action/NavigateToObject.action"
+  DEPENDENCIES geometry_msgs
 )
 
 if(BUILD_TESTING)

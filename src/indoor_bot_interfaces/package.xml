@@ -3,12 +3,14 @@
 <package format="3">
   <name>indoor_bot_interfaces</name>
   <version>0.0.1</version>
-  <description>Custom msg/action interfaces shared between Module A and Module B. Empty scaffold for now.</description>
+  <description>Custom msg/action interfaces shared between Module A and Module B.</description>
   <maintainer email="avantika.aji22@gmail.com">Avantika Ajit</maintainer>
   <license>AGPL-3.0-only</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <depend>geometry_msgs</depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>
 

@@ -1,66 +1,164 @@
-# indoor-autonomous-robot
+# Indoor Autonomous Robot — Perception-Aware Navigation in ROS 2
 
-An autonomous indoor robot simulation built on ROS 2 Jazzy: Gazebo Harmonic
-for simulation, Nav2 for navigation, and a YOLO-based perception pipeline
-that feeds detections and an obstacle cloud back into the Nav2 costmap. The
-whole stack runs headless in Docker, visualized live over Foxglove.
+A simulated differential-drive robot that maps an indoor space, navigates to a goal
+with Nav2, and uses camera-based object detection to avoid obstacles its LiDAR
+cannot see.
 
-## Pipeline
+> **Status: in development (Milestone 0 of 6).** The workspace, interface contract
+> and toolchain are in place. The robot does not drive yet. Results tables below are
+> intentionally empty until the experiments in M6 have actually been run.
+
+## The idea
+
+A 2D LiDAR sees a single horizontal slice of the world. Anything below that plane —
+a bag on the floor, a low stool, a cable tray — is invisible to it, and a robot
+relying on LiDAR alone will drive straight into it.
+
+This project puts a lightweight object detector on the robot's RGB-D camera,
+projects each detection into 3D using the depth image, and publishes the result as a
+point cloud that Nav2 consumes as a **second observation source** in its costmap. The
+navigation stack then plans around obstacles it otherwise could not perceive.
+
+The claim is testable, so it gets tested: the evaluation is an ablation over
+identical trials with perception enabled and disabled.
+
+## Architecture
 
 ```
- sensors (scan, RGB-D, odom, tf)
-        |
-        v
-   perception (YOLO detection + depth fusion)
-        |
-        v
-   costmap (obstacle_layer: scan + perception cloud)
-        |
-        v
-      Nav2 (planner + DWB controller)
-        |
-        v
-     control (/cmd_vel -> ros_gz bridge -> Gazebo)
+Gazebo Harmonic
+  ├─ 2D LiDAR ─────────────┐
+  ├─ RGB-D camera ──┐      │
+  ├─ IMU            │      │
+  └─ contact sensor │      │   (ground-truth collisions, evaluation only)
+        ↓ ros_gz_bridge     │
+   ┌────┴──────────────┐    │
+   │  detector_node    │    │   /perception/detections_2d
+   │        ↓          │    │
+   │  projector_node   │    │   /perception/detections_3d
+   └────┬──────────────┘    │   /perception/obstacle_cloud
+        │                   │
+        └─────────┬─────────┘
+                  ↓
+   Nav2 costmap — obstacle layer, two observation sources
+                  ↓
+   slam_toolbox → map→odom transform
+                  ↓
+   Nav2: planner_server → controller_server → /cmd_vel
+                  ↓
+   metrics_logger → CSV
 ```
 
-## Modules
+The perception and navigation halves communicate only through the topics defined in
+[`docs/INTERFACES.md`](docs/INTERFACES.md), which is a frozen contract rather than
+documentation written after the fact. That decoupling is what lets the two halves be
+developed independently.
 
-| | Module A | Module B |
-|---|---|---|
-| Focus | Robotics / navigation | AI / perception |
-| Owns | Description, Gazebo sim, sensor bridges, Nav2, bringup | YOLO detection, depth fusion, obstacle cloud |
-| Packages | `indoor_bot_description`, `indoor_bot_gazebo`, `indoor_bot_navigation`, `indoor_bot_bringup`, `indoor_bot_interfaces` | `indoor_bot_perception`, `indoor_bot_evaluation` |
+## Stack
 
-The interface between the two modules is defined in
-[docs/INTERFACES.md](docs/INTERFACES.md) and requires review from both
-sides to change.
+| Component | Choice |
+|---|---|
+| ROS 2 | Jazzy Jalisco (LTS) |
+| Simulator | Gazebo Harmonic, headless |
+| SLAM | `slam_toolbox` |
+| Navigation | Nav2 — NavFn planner, DWB controller |
+| Detection | Ultralytics YOLO11n, CPU inference |
+| Visualisation | Foxglove via `foxglove_bridge` |
+| Environment | Docker, arm64 |
 
-## Docs
+Nothing that already exists in the ROS ecosystem is reimplemented. The work is the
+robot description, the perception pipeline, the integration between them, and the
+evaluation.
 
-- [docs/SETUP.md](docs/SETUP.md) — Docker-based build and run instructions
-- [docs/INTERFACES.md](docs/INTERFACES.md) — Module A / Module B contract
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system architecture
-- [docs/DEBUG_LOG.md](docs/DEBUG_LOG.md) — debugging notes
+## Hardware constraints
 
-## CI
+Developed on an Apple Silicon MacBook (M2) inside a Docker container. No NVIDIA GPU
+and no GPU passthrough to the container, so Gazebo renders camera images in software
+and inference runs on CPU. The system is scoped to fit:
 
-![CI](https://img.shields.io/badge/CI-pending-lightgrey)
+- Cameras at 320×240, 10 Hz, rather than 640×480, 15 Hz
+- LiDAR at 180 samples, 5 m range
+- A single ~8×8 m room
+- DWB controller instead of MPPI, which samples too many trajectories to keep up
+- `use_sim_time: true` throughout; time-to-goal is reported in **simulated** seconds
+  with the real-time factor logged alongside it, and inference latency in wall-clock
+  milliseconds with the hardware named
+
+These are limits worked around deliberately, not defaults left unexamined.
 
 ## Results
 
-_TBD_
+<!-- Filled in at M6. Empty until the trials have actually been run. -->
+
+Navigation, 20 trials per condition, fixed start/goal pairs with logged seeds:
+
+| Condition | Success rate | Collisions | Time to goal (sim s) | Path length (m) |
+|---|---|---|---|---|
+| LiDAR only | — | — | — | — |
+| LiDAR + perception | — | — | — | — |
+| LiDAR + perception, low obstacles | — | — | — | — |
+
+Detection, held-out set of simulated frames:
+
+| Metric | Value |
+|---|---|
+| mAP@0.5 | — |
+| Inference latency, p50 / p95 | — |
+
+Collisions are counted from a Gazebo contact sensor on the robot base rather than
+inferred from LiDAR ranges.
 
 ## Demo
 
-_TBD_
+<!-- Added at M6. -->
 
-## Hardware note
+## Repository layout
 
-Developed on Apple Silicon (M2) in Docker, with Gazebo running headless
-(no GPU, no display) and CPU-only inference for the perception pipeline.
+```
+src/
+  indoor_bot_description/   robot URDF, sensors, frames
+  indoor_bot_gazebo/        worlds, models, spawn and bridge launch
+  indoor_bot_navigation/    Nav2 and slam_toolbox parameters, maps
+  indoor_bot_bringup/       top-level launch files
+  indoor_bot_perception/    detector and 3D projection nodes
+  indoor_bot_interfaces/    custom messages and actions
+  indoor_bot_evaluation/    metrics logging, experiment runner, analysis
+docs/
+  INTERFACES.md             the contract between the two modules
+  ARCHITECTURE.md           design decisions and trade-offs
+  SETUP.md                  reproducible environment setup
+  DEBUG_LOG.md              problems hit and how they were resolved
+```
 
-## License
+## Getting started
 
-AGPL-3.0. This project depends on Ultralytics YOLO, which is licensed
-AGPL-3.0, so the whole project is licensed AGPL-3.0 as well. See
-[LICENSE](LICENSE).
+See [`docs/SETUP.md`](docs/SETUP.md). In short:
+
+```bash
+docker compose build
+docker compose up -d
+docker compose exec ros bash
+
+cd /ws
+colcon build --symlink-install
+```
+
+Dependency versions are pinned in `docs/requirements.txt`. Two of the pins are
+load-bearing: `numpy<2`, because `cv_bridge` is compiled against numpy 1.x, and
+`setuptools<80`, which `colcon-core` requires.
+
+## Milestones
+
+| | | Status |
+|---|---|---|
+| M0 | Workspace, interface contract, CI | in progress |
+| M1 | Robot in simulation, sensors publishing | planned |
+| M2 | SLAM map, detector publishing detections | planned |
+| M3 | Autonomous navigation to a goal, 3D projection | planned |
+| M4 | Perception integrated into the costmap | planned |
+| M5 | Experiment runner and metrics logging | planned |
+| M6 | Experiments, analysis, write-up | planned |
+
+## Licence
+
+AGPL-3.0, required by Ultralytics YOLO. Swapping the detector for
+`torchvision`'s SSDLite would allow a permissive licence.

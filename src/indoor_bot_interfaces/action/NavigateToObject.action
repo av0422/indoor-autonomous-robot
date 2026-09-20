@@ -1,0 +1,12 @@
+# Goal: navigate to the nearest detected instance of an object class
+string object_class
+float32 stop_distance_m 0.8
+---
+# Result
+bool success
+string message
+geometry_msgs/PoseStamped final_pose
+---
+# Feedback
+float32 distance_remaining
+string current_state
