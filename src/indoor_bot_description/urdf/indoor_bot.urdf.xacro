@@ -1,0 +1,226 @@
+<?xml version="1.0"?>
+<robot name="indoor_bot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find indoor_bot_description)/urdf/inertial_macros.xacro"/>
+
+  <!-- ================= Properties ================= -->
+
+  <!-- base -->
+  <xacro:property name="base_x" value="0.30"/>
+  <xacro:property name="base_y" value="0.24"/>
+  <xacro:property name="base_z" value="0.10"/>
+  <xacro:property name="base_mass" value="3.0"/>
+
+  <!-- drive wheels -->
+  <xacro:property name="wheel_radius" value="0.035"/>
+  <xacro:property name="wheel_width" value="0.025"/>
+  <xacro:property name="wheel_mass" value="0.2"/>
+  <xacro:property name="wheel_y_offset" value="0.14"/>
+
+  <!-- rear caster -->
+  <xacro:property name="caster_radius" value="0.02"/>
+  <xacro:property name="caster_mass" value="0.05"/>
+  <xacro:property name="caster_x_offset" value="-0.12"/>
+
+  <!-- base_footprint -> base_link: wheel-radius height above the ground -->
+  <xacro:property name="base_link_z" value="${wheel_radius}"/>
+
+  <!-- rear caster sits level with the driven wheels -->
+  <xacro:property name="caster_z_offset" value="${-wheel_radius + caster_radius}"/>
+
+  <!-- 2D LiDAR -->
+  <xacro:property name="scan_height" value="0.20"/> <!-- above ground -->
+  <xacro:property name="scan_z_offset" value="${scan_height - base_link_z}"/>
+  <xacro:property name="scan_radius" value="0.020"/>
+  <xacro:property name="scan_length" value="0.040"/>
+  <xacro:property name="scan_mass" value="0.05"/>
+
+  <!-- RGB-D camera -->
+  <xacro:property name="camera_height" value="0.15"/> <!-- above ground -->
+  <xacro:property name="camera_z_offset" value="${camera_height - base_link_z}"/>
+  <xacro:property name="camera_x_offset" value="${base_x / 2 - 0.01}"/>
+  <xacro:property name="camera_pitch" value="0.17"/> <!-- radians, tilted down -->
+  <xacro:property name="camera_x" value="0.025"/>
+  <xacro:property name="camera_y" value="0.090"/>
+  <xacro:property name="camera_z" value="0.025"/>
+  <xacro:property name="camera_mass" value="0.05"/>
+
+  <!-- IMU -->
+  <xacro:property name="imu_size" value="0.020"/>
+  <xacro:property name="imu_mass" value="0.01"/>
+
+  <!-- ================= base_footprint / base_link ================= -->
+
+  <link name="base_footprint"/>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${base_link_z}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${base_z / 2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_x} ${base_y} ${base_z}"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${base_z / 2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_x} ${base_y} ${base_z}"/>
+      </geometry>
+    </collision>
+    <xacro:inertia_box mass="${base_mass}" x="${base_x}" y="${base_y}" z="${base_z}">
+      <origin xyz="0 0 ${base_z / 2}" rpy="0 0 0"/>
+    </xacro:inertia_box>
+  </link>
+
+  <!-- ================= drive wheels ================= -->
+
+  <xacro:macro name="drive_wheel" params="prefix y_reflect">
+    <link name="${prefix}_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <xacro:inertia_cylinder mass="${wheel_mass}" radius="${wheel_radius}" length="${wheel_width}">
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
+      </xacro:inertia_cylinder>
+    </link>
+
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="0 ${y_reflect * wheel_y_offset} 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:drive_wheel prefix="left" y_reflect="1"/>
+  <xacro:drive_wheel prefix="right" y_reflect="-1"/>
+
+  <!-- ================= rear caster ================= -->
+
+  <link name="caster_link">
+    <visual>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+    </collision>
+    <xacro:inertia_sphere mass="${caster_mass}" radius="${caster_radius}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:inertia_sphere>
+  </link>
+
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_link"/>
+    <origin xyz="${caster_x_offset} 0 ${caster_z_offset}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ================= base_scan (2D LiDAR) ================= -->
+
+  <link name="base_scan">
+    <visual>
+      <geometry>
+        <cylinder radius="${scan_radius}" length="${scan_length}"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${scan_radius}" length="${scan_length}"/>
+      </geometry>
+    </collision>
+    <xacro:inertia_cylinder mass="${scan_mass}" radius="${scan_radius}" length="${scan_length}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:inertia_cylinder>
+  </link>
+
+  <joint name="scan_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_scan"/>
+    <origin xyz="0 0 ${scan_z_offset}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ================= camera_link (RGB-D body) ================= -->
+
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="${camera_x} ${camera_y} ${camera_z}"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${camera_x} ${camera_y} ${camera_z}"/>
+      </geometry>
+    </collision>
+    <xacro:inertia_box mass="${camera_mass}" x="${camera_x}" y="${camera_y}" z="${camera_z}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:inertia_box>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="${camera_x_offset} 0 ${camera_z_offset}" rpy="0 ${camera_pitch} 0"/>
+  </joint>
+
+  <!-- optical frames: z forward, x right, y down (REP-103), no offset from camera_link -->
+
+  <link name="camera_color_optical_frame"/>
+
+  <joint name="camera_color_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_color_optical_frame"/>
+    <origin xyz="0 0 0" rpy="${-pi / 2} 0 ${-pi / 2}"/>
+  </joint>
+
+  <link name="camera_depth_optical_frame"/>
+
+  <joint name="camera_depth_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_depth_optical_frame"/>
+    <origin xyz="0 0 0" rpy="${-pi / 2} 0 ${-pi / 2}"/>
+  </joint>
+
+  <!-- ================= imu_link ================= -->
+
+  <link name="imu_link">
+    <visual>
+      <geometry>
+        <box size="${imu_size} ${imu_size} ${imu_size}"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${imu_size} ${imu_size} ${imu_size}"/>
+      </geometry>
+    </collision>
+    <xacro:inertia_box mass="${imu_mass}" x="${imu_size}" y="${imu_size}" z="${imu_size}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:inertia_box>
+  </link>
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+</robot>

@@ -20,3 +20,13 @@ interface files") rather than generating an empty package.
 Fix: an interfaces package must either define at least one interface or
 not call `rosidl_generate_interfaces()` at all. Added
 `action/NavigateToObject.action` to give it one.
+
+## 2026-09-21 — ament_copyright fails on launch/display.launch.py
+
+CI failed on `ament_copyright` because `launch/display.launch.py` had no
+copyright header.
+
+Fix: decided to disable the copyright linter repo-wide since the licence
+is already declared in `LICENSE` and in each package's `package.xml`;
+per-file copyright headers are not used in this project. Every other
+`ament_lint_auto` linter stays enabled.
