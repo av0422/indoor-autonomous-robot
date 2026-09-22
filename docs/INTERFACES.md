@@ -15,9 +15,18 @@ PR reviewed by both.
 | `/scan` | `sensor_msgs/LaserScan` | `base_scan` | 10 Hz | 180 samples, 5 m range |
 | `/camera/color/image_raw` | `sensor_msgs/Image` (`rgb8`) | `camera_color_optical_frame` | 10 Hz | 320x240 |
 | `/camera/color/camera_info` | `sensor_msgs/CameraInfo` | `camera_color_optical_frame` | 10 Hz | |
-| `/camera/depth/image_raw` | `sensor_msgs/Image` (`32FC1`, metres) | `camera_depth_optical_frame` | 10 Hz | 320x240 |
+| `/camera/depth/image_raw` | `sensor_msgs/Image` (`32FC1`, metres) | `camera_color_optical_frame` | 10 Hz | 320x240, see note below |
 | `/odom` | `nav_msgs/Odometry` | `odom` -> `base_link` | 30 Hz | |
 | `/tf`, `/tf_static` | | `map` -> `odom` -> `base_link` -> sensors | | |
+
+Gazebo's `rgbd_camera` sensor is a single sensor that produces both the
+colour and depth streams from one optical centre, so both share the same
+frame: `camera_color_optical_frame`. `camera_depth_optical_frame` remains
+in the URDF for hardware parity (a real depth camera can have a distinct
+optical centre) but is unused by the simulated depth topic — nothing
+publishes it in sim, and Module B should key off
+`camera_color_optical_frame` for both `/camera/color/...` and
+`/camera/depth/...` when running against Gazebo.
 
 ## Module B publishes / Module A consumes
 
@@ -85,7 +94,10 @@ obstacle_layer:
 ## Known integration gotchas
 
 - (a) Nav2 on Jazzy may emit `Twist` or `TwistStamped` on `/cmd_vel` — set
-  this explicitly and match the `ros_gz` bridge configuration.
+  this explicitly and match the `ros_gz` bridge configuration. Resolved for
+  this project: `/cmd_vel` is `geometry_msgs/msg/Twist` (unstamped),
+  because that is the type the `ros_gz_bridge` config maps it to for the
+  `gz-sim-diff-drive-system` plugin.
 - (b) Camera optical frame convention (z forward, x right, y down) differs
   from `base_link`.
 - (c) `numpy` must stay `<2` because `cv_bridge` is built against numpy 1.x.

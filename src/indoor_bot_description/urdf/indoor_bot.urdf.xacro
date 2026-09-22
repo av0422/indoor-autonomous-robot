@@ -223,4 +223,8 @@
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </joint>
 
+  <!-- Gazebo-only plugins/sensors, kept out of the base description.
+       Included last since it references properties and links defined above. -->
+  <xacro:include filename="$(find indoor_bot_description)/urdf/indoor_bot.gazebo.xacro"/>
+
 </robot>
