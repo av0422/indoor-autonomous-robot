@@ -151,7 +151,7 @@ load-bearing: `numpy<2`, because `cv_bridge` is compiled against numpy 1.x, and
 | | | Status |
 |---|---|---|
 | M0 | Workspace, interface contract, CI | in progress |
-| M1 | Robot in simulation, sensors publishing | planned |
+| M1 | Robot in simulation, sensors publishing | done |
 | M2 | SLAM map, detector publishing detections | planned |
 | M3 | Autonomous navigation to a goal, 3D projection | planned |
 | M4 | Perception integrated into the costmap | planned |
