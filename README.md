@@ -4,9 +4,10 @@ A simulated differential-drive robot that maps an indoor space, navigates to a g
 with Nav2, and uses camera-based object detection to avoid obstacles its LiDAR
 cannot see.
 
-> **Status: in development (Milestone 0 of 6).** The workspace, interface contract
-> and toolchain are in place. The robot does not drive yet. Results tables below are
-> intentionally empty until the experiments in M6 have actually been run.
+> **Status: in development (Milestone 0 of 6).** The robot runs in Gazebo with
+> working LiDAR, RGB-D camera and IMU, and drives on command. Navigation and
+> perception are not implemented yet. Results tables below are intentionally
+> empty until the experiments in M6 have actually been run.
 
 ## The idea
 
@@ -77,6 +78,8 @@ and inference runs on CPU. The system is scoped to fit:
 
 - Cameras at 320×240, 10 Hz, rather than 640×480, 15 Hz
 - LiDAR at 180 samples, 5 m range
+- Measured sensor rates under software rendering: LiDAR 9.74 Hz, colour image
+  9.76 Hz, depth image 9.71 Hz (targets 10 Hz)
 - A single ~8×8 m room
 - DWB controller instead of MPPI, which samples too many trajectories to keep up
 - `use_sim_time: true` throughout; time-to-goal is reported in **simulated** seconds
@@ -150,7 +153,7 @@ load-bearing: `numpy<2`, because `cv_bridge` is compiled against numpy 1.x, and
 
 | | | Status |
 |---|---|---|
-| M0 | Workspace, interface contract, CI | in progress |
+| M0 | Workspace, interface contract, CI | done |
 | M1 | Robot in simulation, sensors publishing | done |
 | M2 | SLAM map, detector publishing detections | planned |
 | M3 | Autonomous navigation to a goal, 3D projection | planned |
