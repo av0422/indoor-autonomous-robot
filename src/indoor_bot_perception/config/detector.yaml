@@ -1,0 +1,9 @@
+detector_node:
+  ros__parameters:
+    model_path: "yolo11n.pt"
+    device: "cpu"
+    conf_threshold: 0.25
+    iou_threshold: 0.45
+    input_size: 640
+    target_classes: ""
+    publish_annotated: true

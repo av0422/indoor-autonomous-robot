@@ -26,6 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'detector_node = indoor_bot_perception.detector_node:main',
         ],
     },
 )

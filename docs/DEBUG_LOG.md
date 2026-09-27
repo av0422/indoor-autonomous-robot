@@ -30,3 +30,28 @@ Fix: decided to disable the copyright linter repo-wide since the licence
 is already declared in `LICENSE` and in each package's `package.xml`;
 per-file copyright headers are not used in this project. Every other
 `ament_lint_auto` linter stays enabled.
+
+## ros2 run fails with ModuleNotFoundError for ultralytics
+
+The wrapper colcon generates in install/ has a hardcoded shebang of
+/usr/bin/python3, which does not see packages installed in /ws/.venv.
+Activating the venv in the shell does not help, because the wrapper
+launches a different interpreter.
+
+Fix: export PYTHONPATH=/ws/.venv/lib/python3.12/site-packages:$PYTHONPATH
+before ros2 run, or run the node file directly with python3.
+
+## YOLO false positives on simulated imagery
+
+Running yolo11n on Gazebo camera frames produced detections of 'airplane',
+'stop sign' and 'umbrella' in a room containing only grey walls and boxes.
+All confidence scores fell between 0.25 and 0.31, i.e. immediately above
+the default threshold of 0.25.
+
+Cause: domain gap. The model is trained on photographs; untextured
+simulated surfaces do not resemble its training distribution, so it
+matches weakly to whatever class is nearest.
+
+Fix: set conf=0.5. Longer term, the simulated world needs models
+resembling COCO classes (chairs, potted plants) before detection
+accuracy can be measured meaningfully.
