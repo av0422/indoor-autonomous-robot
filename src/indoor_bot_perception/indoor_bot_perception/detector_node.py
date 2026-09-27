@@ -19,6 +19,22 @@ class DetectorNode(Node):
         """Set up the subscription."""
         super().__init__('detector_node')
 
+        self.declare_parameter('model_path', 'yolo11n.pt')
+        self.declare_parameter('device', 'cpu')
+        self.declare_parameter('conf_threshold', 0.5)
+        self.declare_parameter('iou_threshold', 0.45)
+        self.declare_parameter('input_size', 320)
+        self.declare_parameter('publish_annotated', True)
+        self.declare_parameter('annotated_period_s', 0.5)
+
+        self.model_path = self.get_parameter('model_path').value
+        self.device = self.get_parameter('device').value
+        self.conf_threshold = self.get_parameter('conf_threshold').value
+        self.iou_threshold = self.get_parameter('iou_threshold').value
+        self.input_size = self.get_parameter('input_size').value
+        self.publish_annotated = self.get_parameter('publish_annotated').value
+        self.annotated_period_s = self.get_parameter('annotated_period_s').value
+
         qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.subscription = self.create_subscription(
             Image,
@@ -40,8 +56,7 @@ class DetectorNode(Node):
 
         self.last_annotated = 0.0
         self.bridge = CvBridge()
-        self.conf_threshold = 0.5
-        self.model = YOLO('yolo11n.pt')
+        self.model = YOLO(self.model_path)
         self.busy = False
         self.frame_count = 0
         self.latencies = []
@@ -59,7 +74,7 @@ class DetectorNode(Node):
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             start = time.perf_counter()
             results = self.model.predict(
-                frame, imgsz=320, conf=self.conf_threshold, verbose=False
+                frame, imgsz=self.input_size, conf=self.conf_threshold, iou=self.iou_threshold, device=self.device, verbose=False
             )
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             self.latencies.append(elapsed_ms)
@@ -69,7 +84,7 @@ class DetectorNode(Node):
             self.detection_pub.publish(detection_msg)
 
             now = time.perf_counter()
-            if now - self.last_annotated > 0.5:
+            if self.publish_annotated and now - self.last_annotated > self.annotated_period_s:
                 annotated = results[0].plot()
                 annotated_msg = self.bridge.cv2_to_imgmsg(annotated, encoding='bgr8')
                 annotated_msg.header = msg.header
