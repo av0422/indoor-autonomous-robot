@@ -74,7 +74,12 @@ class DetectorNode(Node):
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             start = time.perf_counter()
             results = self.model.predict(
-                frame, imgsz=self.input_size, conf=self.conf_threshold, iou=self.iou_threshold, device=self.device, verbose=False
+                frame,
+                imgsz=self.input_size,
+                conf=self.conf_threshold,
+                iou=self.iou_threshold,
+                device=self.device,
+                verbose=False
             )
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             self.latencies.append(elapsed_ms)
@@ -114,7 +119,7 @@ class DetectorNode(Node):
         response.success = True
         response.message = f'Detection {state}'
         return response
-    
+
     def build_detection_array(self, boxes, header):
         """Convert YOLO boxes into a Detection2DArray message."""
         msg = Detection2DArray()
