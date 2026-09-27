@@ -7,6 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image
+from std_srvs.srv import SetBool
 from ultralytics import YOLO
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
 
@@ -31,6 +32,12 @@ class DetectorNode(Node):
         self.annotated_pub = self.create_publisher(
             Image, '/perception/annotated_image', 1
         )
+
+        self.enabled = True
+        self.enable_srv = self.create_service(
+            SetBool, '/perception/set_enabled', self.set_enabled_callback
+        )
+
         self.last_annotated = 0.0
         self.bridge = CvBridge()
         self.conf_threshold = 0.5
@@ -42,6 +49,8 @@ class DetectorNode(Node):
 
     def image_callback(self, msg):
         """Run detection on one camera image."""
+        if not self.enabled:
+            return
         if self.busy:
             return
         self.busy = True
@@ -82,6 +91,15 @@ class DetectorNode(Node):
         finally:
             self.busy = False
 
+    def set_enabled_callback(self, request, response):
+        """Enable or disable detection at runtime."""
+        self.enabled = request.data
+        state = 'enabled' if self.enabled else 'disabled'
+        self.get_logger().info(f'Detection {state}')
+        response.success = True
+        response.message = f'Detection {state}'
+        return response
+    
     def build_detection_array(self, boxes, header):
         """Convert YOLO boxes into a Detection2DArray message."""
         msg = Detection2DArray()
