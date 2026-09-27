@@ -1,14 +1,16 @@
 """Measure YOLO inference latency on a folder of images."""
 
+from pathlib import Path
 import statistics
 import time
-from pathlib import Path
+
 
 from ultralytics import YOLO
 
 IMAGE_DIR = Path('/ws/data/bench_images')
 MODEL = 'yolo11n.pt'
 IMGSZ = 320
+
 
 def main():
     """Run the benchmark and print latency statistics."""

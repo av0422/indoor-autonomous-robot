@@ -1,13 +1,15 @@
 """YOLO object detector node for the indoor robot."""
 
+import time
+
+from cv_bridge import CvBridge
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 from ultralytics import YOLO
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
-import time
+
 
 class DetectorNode(Node):
     """Subscribe to camera images and run object detection on them."""
@@ -26,6 +28,10 @@ class DetectorNode(Node):
         self.detection_pub = self.create_publisher(
             Detection2DArray, '/perception/detections_2d', 10
         )
+        self.annotated_pub = self.create_publisher(
+            Image, '/perception/annotated_image', 1
+        )
+        self.last_annotated = 0.0
         self.bridge = CvBridge()
         self.conf_threshold = 0.5
         self.model = YOLO('yolo11n.pt')
@@ -52,6 +58,14 @@ class DetectorNode(Node):
             boxes = results[0].boxes
             detection_msg = self.build_detection_array(boxes, msg.header)
             self.detection_pub.publish(detection_msg)
+
+            now = time.perf_counter()
+            if now - self.last_annotated > 0.5:
+                annotated = results[0].plot()
+                annotated_msg = self.bridge.cv2_to_imgmsg(annotated, encoding='bgr8')
+                annotated_msg.header = msg.header
+                self.annotated_pub.publish(annotated_msg)
+                self.last_annotated = now
 
             if len(boxes) > 0:
                 names = [self.model.names[int(c)] for c in boxes.cls]
@@ -91,6 +105,7 @@ class DetectorNode(Node):
             msg.detections.append(detection)
 
         return msg
+
 
 def main(args=None):
     """Start the node and spin until interrupted."""
