@@ -1,3 +1,7 @@
+from glob import glob
+import os
+
+
 from setuptools import find_packages, setup
 
 package_name = 'indoor_bot_evaluation'
@@ -10,6 +14,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'scripts'), glob('scripts/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
