@@ -20,3 +20,13 @@ queue depth of 1 so the node always works on the newest available image
 rather than falling progressively behind.
 
 This meets the >=5 Hz requirement in docs/INTERFACES.md, but with little margin.
+
+## Outcome (measured after integration)
+
+This prediction did not hold for simulated input. Against the recorded
+bag, inference took 25.7 ms p50 / 27.4 ms p95 and the node sustained the
+full 9.7 Hz camera rate. Photographs are far more expensive than
+untextured simulated frames, which produce few candidate boxes.
+
+The frame-skip mechanism was kept, since inference cost will rise once
+the world contains detectable objects. See results/m2_detection.md.
