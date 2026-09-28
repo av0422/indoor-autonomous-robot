@@ -21,6 +21,7 @@
   <xacro:property name="caster_radius" value="0.02"/>
   <xacro:property name="caster_mass" value="0.05"/>
   <xacro:property name="caster_x_offset" value="-0.12"/>
+  <xacro:property name="caster_front_x_offset" value="0.12"/>
 
   <!-- base_footprint -> base_link: wheel-radius height above the ground -->
   <xacro:property name="base_link_z" value="${wheel_radius}"/>
@@ -131,6 +132,30 @@
     <parent link="base_link"/>
     <child link="caster_link"/>
     <origin xyz="${caster_x_offset} 0 ${caster_z_offset}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- front caster: stops the body tipping forward -->
+
+  <link name="front_caster_link">
+    <visual>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+    </collision>
+    <xacro:inertia_sphere mass="${caster_mass}" radius="${caster_radius}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:inertia_sphere>
+  </link>
+
+  <joint name="front_caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_caster_link"/>
+    <origin xyz="${caster_front_x_offset} 0 ${caster_z_offset}" rpy="0 0 0"/>
   </joint>
 
   <!-- ================= base_scan (2D LiDAR) ================= -->
