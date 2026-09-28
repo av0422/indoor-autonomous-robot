@@ -55,3 +55,26 @@ matches weakly to whatever class is nearest.
 Fix: set conf=0.5. Longer term, the simulated world needs models
 resembling COCO classes (chairs, potted plants) before detection
 accuracy can be measured meaningfully.
+
+## 2026-09-28 — first launch after adding Fuel models will be slow
+
+`indoor_room.sdf` now `<include>`s several models from
+`fuel.gazebosim.org` (chairs, a table) for the tall obstacle tier — see
+`docs/ARCHITECTURE.md`'s "World layout" section. Gazebo fetches and caches
+each `<include>`d Fuel model the first time it is used (into
+`~/.gz/fuel` inside the container); every launch after that reuses the
+cache and starts at normal speed.
+
+Consequence: the first `ros2 launch indoor_bot_gazebo sim.launch.py` after
+this change (or after clearing the `.gz` cache, e.g. a fresh container
+volume) will be noticeably slower and requires network access from inside
+the container. If the container has no network access, that first launch
+will hang or fail to spawn the chair/table models.
+
+## 2026-09-29 — robot pitched nose-down on spawn
+
+Robot pitched 13.5 deg nose-down on spawn. Cause: single rear caster, front
+of the body rested on the floor; pitch = asin(0.035/0.15). Effect: LiDAR
+scan plane tilted (floor returns at 0.83 m), camera looked 23 deg below
+horizontal, earlier tier tests were invalid. Fix: front caster. Check: IMU
+orientation y should be near 0 on a fresh spawn.
