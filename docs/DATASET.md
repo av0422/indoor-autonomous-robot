@@ -72,3 +72,47 @@ overall duration and start time, without playing anything back.
 Measured rates are from software-rendered runs on the target hardware (no
 GPU). See `docs/INTERFACES.md` for the full interface contract and target
 rates.
+
+## Training dataset
+
+`src/indoor_bot_evaluation/scripts/datagen.py` generates an auto-labelled
+image dataset for a custom detector, because stock COCO weights barely
+recognise our simulated stand-ins (best scores 0.1-0.3 on the low objects —
+see `results/m2_detection.md`). Ground truth comes from the simulator
+itself, never from hand annotation or from running YOLO on its own output.
+
+**How it works.** The sim must be launched with `datagen:=true`
+(`ros2 launch indoor_bot_gazebo sim.launch.py datagen:=true`), which swaps
+in `worlds/indoor_room_datagen.sdf` — the same room as `indoor_room.sdf`,
+with every object given a unique `gz-sim-label-system` label — and adds a
+pair of `boundingbox_camera` sensors to the robot's `camera_link`
+(`indoor_bot_description/urdf/indoor_bot.gazebo.xacro`), co-located with
+the RGB-D camera at the same resolution and FOV. This is all inert when
+`datagen` is left at its default `false`, so normal simulation and the M6
+ablation are unaffected. Per episode, `datagen.py` teleports every object
+to a random floor pose (`gz service .../set_pose`) and then the robot to
+several random poses, capturing one frame and one label set at each. A
+`visible_2d` box gives the true on-screen extent (handling occlusion and
+frame edges); a second `full_2d` box for the same instance gives its
+un-occluded extent, used only to compute a visibility ratio. Boxes under
+6x6 px or less than 40% visible are dropped; poses with no object in view
+are kept as negatives rather than discarded.
+
+**Single class.** The robot doesn't need to know *what* an object is, only
+that "something is on the floor here" that the LiDAR might miss — so every
+object, low and tall alike, trains as one class, `obstacle` (class 0). This
+also sidesteps needing enough examples per COCO-style category to train a
+multi-class head from a few hundred simulated images.
+
+**Split by episode, not by frame.** All poses from one episode share the
+same object layout, so splitting by frame would let near-duplicate views of
+the same layout leak between train and test, overstating accuracy. Episodes
+are shuffled with the run's `--seed` and assigned whole to train/val/test
+(~70/15/15), so a layout only ever appears in one split.
+
+**Known limitation.** Train and test share one room, one set of Fuel-model
+textures, and one lighting setup. A detector trained on this dataset is
+validated against held-out *poses*, not held-out *environments* — it says
+nothing about how the model generalises to a different room, different
+object meshes, or real camera images. Treat accuracy numbers from this
+dataset as a check that the pipeline works, not as a generalisation claim.

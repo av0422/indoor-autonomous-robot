@@ -1,0 +1,291 @@
+<?xml version="1.0" ?>
+<!-- Training-data variant of indoor_room.sdf: identical room and objects,
+     plus a unique gz-sim-label-system label on each object (1-8) so the
+     robot's boundingbox_camera sensor (indoor_bot.gazebo.xacro, gated by
+     the `datagen` launch arg) can report per-instance ground-truth boxes.
+     Only loaded when `ros2 launch indoor_bot_gazebo sim.launch.py
+     datagen:=true` selects it (see sim.launch.py); indoor_room.sdf itself
+     is untouched, so normal simulation and the ablation are unaffected.
+     Keep object poses/geometry here in sync with indoor_room.sdf by hand;
+     datagen.py randomises poses at runtime via set_pose regardless. -->
+<sdf version="1.9">
+  <world name="indoor_room">
+
+    <physics name="default_physics" type="ode">
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>8 8</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>8 8</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- room: 8x8 m interior, walls 1.0 m high, 0.1 m thick, centred on the origin -->
+
+    <model name="wall_north">
+      <static>true</static>
+      <pose>0 4.05 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>8.1 0.1 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>8.1 0.1 1.0</size></box></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_south">
+      <static>true</static>
+      <pose>0 -4.05 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>8.1 0.1 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>8.1 0.1 1.0</size></box></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_east">
+      <static>true</static>
+      <pose>4.05 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.1 8.1 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 8.1 1.0</size></box></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_west">
+      <static>true</static>
+      <pose>-4.05 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.1 8.1 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 8.1 1.0</size></box></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================
+         Detectable objects, two tiers (see indoor_room.sdf for the full
+         explanation). Each object additionally carries a unique
+         gz-sim-label-system label (1-8), used only to match a visible_2d
+         box to its full_2d box by instance in datagen.py; every object
+         still trains as YOLO class 0 ('obstacle').
+         ================================================================ -->
+
+    <!-- tall - visible to both sensors. label 4 -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Chair</uri>
+      <name>chair_1</name>
+      <pose>1.8 1.2 0 0 0 0.3</pose>
+      <static>true</static>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>4</label>
+      </plugin>
+    </include>
+
+    <!-- tall - visible to both sensors. label 5 -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/OfficeChairGrey</uri>
+      <name>chair_2</name>
+      <pose>-1.5 1.8 0 0 0 1.0</pose>
+      <static>true</static>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>5</label>
+      </plugin>
+    </include>
+
+    <!-- tall - visible to both sensors. label 6 -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/WoodenChair</uri>
+      <name>chair_3</name>
+      <pose>0.5 -2.3 0 0 0 0.6</pose>
+      <static>true</static>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>6</label>
+      </plugin>
+    </include>
+
+    <!-- tall - visible to both sensors. label 7 -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Table</uri>
+      <name>table_1</name>
+      <pose>-2.0 -1.5 0 0 0 0</pose>
+      <static>true</static>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>7</label>
+      </plugin>
+    </include>
+
+    <!-- tall - visible to both sensors. Potted-plant stand-in (see
+         indoor_room.sdf). label 8 -->
+    <model name="potted_plant_1">
+      <static>true</static>
+      <pose>2.3 -1.0 0 0 0 0</pose>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>8</label>
+      </plugin>
+      <link name="link">
+        <collision name="pot_collision">
+          <pose>0 0 0.125 0 0 0</pose>
+          <geometry><cylinder><radius>0.15</radius><length>0.25</length></cylinder></geometry>
+        </collision>
+        <visual name="pot_visual">
+          <pose>0 0 0.125 0 0 0</pose>
+          <geometry><cylinder><radius>0.15</radius><length>0.25</length></cylinder></geometry>
+          <material>
+            <ambient>0.45 0.28 0.15 1</ambient>
+            <diffuse>0.45 0.28 0.15 1</diffuse>
+          </material>
+        </visual>
+        <collision name="foliage_collision">
+          <pose>0 0 0.5 0 0 0</pose>
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+        </collision>
+        <visual name="foliage_visual">
+          <pose>0 0 0.5 0 0 0</pose>
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+          <material>
+            <ambient>0.15 0.45 0.15 1</ambient>
+            <diffuse>0.15 0.45 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- low - below LiDAR plane, camera only. Backpack stand-in (see
+         indoor_room.sdf). label 1 -->
+    <model name="low_backpack">
+      <static>true</static>
+      <pose>1.2 0.3 0.06 0 0 0.4</pose>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>1</label>
+      </plugin>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.30 0.22 0.12</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.30 0.22 0.12</size></box></geometry>
+          <material>
+            <ambient>0.45 0.1 0.1 1</ambient>
+            <diffuse>0.45 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- low - below LiDAR plane, camera only. Suitcase stand-in (see
+         indoor_room.sdf). label 2 -->
+    <model name="low_suitcase">
+      <static>true</static>
+      <pose>-0.8 0.8 0.07 0 0 0.2</pose>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>2</label>
+      </plugin>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.55 0.38 0.14</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.55 0.38 0.14</size></box></geometry>
+          <material>
+            <ambient>0.1 0.15 0.45 1</ambient>
+            <diffuse>0.1 0.15 0.45 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- low - below LiDAR plane, camera only. Sports-ball stand-in (see
+         indoor_room.sdf). label 3 -->
+    <model name="low_sports_ball">
+      <static>true</static>
+      <pose>1.0 -0.5 0.06 0 0 0</pose>
+      <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+        <label>3</label>
+      </plugin>
+      <link name="link">
+        <collision name="collision">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <material>
+            <ambient>0.9 0.45 0.05 1</ambient>
+            <diffuse>0.9 0.45 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

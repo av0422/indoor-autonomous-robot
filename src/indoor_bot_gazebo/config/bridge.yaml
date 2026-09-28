@@ -58,3 +58,17 @@
   ros_type_name: sensor_msgs/msg/CameraInfo
   gz_type_name: gz.msgs.CameraInfo
   direction: GZ_TO_ROS
+
+# Training-data ground truth (datagen.py). Only published when the sim is
+# launched with datagen:=true; otherwise these topics simply carry nothing.
+- ros_topic_name: /camera/bounding_box/visible
+  gz_topic_name: /camera/bounding_box/visible
+  ros_type_name: vision_msgs/msg/Detection2DArray
+  gz_type_name: gz.msgs.AnnotatedAxisAligned2DBox_V
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /camera/bounding_box/full
+  gz_topic_name: /camera/bounding_box/full
+  ros_type_name: vision_msgs/msg/Detection2DArray
+  gz_type_name: gz.msgs.AnnotatedAxisAligned2DBox_V
+  direction: GZ_TO_ROS
