@@ -28,3 +28,10 @@ The simulated room contains no objects from the COCO classes YOLO was
 trained on. Remaining detections are false positives ('airplane',
 confidence 0.5-0.6) on plain wall surfaces. Detection accuracy cannot be
 measured until the world contains recognisable objects.
+
+## Class filtering
+
+'airplane' false positives on plain walls ranged from 0.51 to 0.87
+confidence, well above the 0.5 threshold. Fixed by restricting `classes=`
+in `model.predict(...)` to the indoor `target_classes` list
+(`detector.yaml`), so only obstacle-relevant COCO classes are reported.
