@@ -78,3 +78,25 @@ of the body rested on the floor; pitch = asin(0.035/0.15). Effect: LiDAR
 scan plane tilted (floor returns at 0.83 m), camera looked 23 deg below
 horizontal, earlier tier tests were invalid. Fix: front caster. Check: IMU
 orientation y should be near 0 on a fresh spawn.
+
+## Datagen output folder is not cleared between runs
+
+The datagen script writes into data/obstacle_dataset without clearing it.
+The two 40-image verify runs left 24 image/label pairs (16 train, 8 val) in
+the folders, and the full 150-episode run reused the same episode names
+(ep0000-ep0004) with different splits. Result: 1224 files on disk instead
+of 1200, and three episode names (ep0000, ep0002, ep0003) appeared in more
+than one split. Found by comparing per-split file counts with the
+generator's report and by listing episode names across splits. Fixed by
+deleting files older than the full run (find ... ! -newermt <date>
+-delete) and removing the labels/*.cache files, then re-checking counts
+(840/176/184) and split overlap (none). Prevention: clear
+data/obstacle_dataset before any full run, or make datagen.py refuse to
+start when the output folder is not empty.
+
+## A second gz sim without GZ_PARTITION crashed the running sim
+
+A test launch of a second software-rendered gz sim while the main sim was
+running crashed the main instance. Cause: both instances joined the same
+transport partition. Fix: set a distinct GZ_PARTITION for any parallel
+test instance, or stop the main sim first.
