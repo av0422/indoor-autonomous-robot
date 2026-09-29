@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-teleop-twist-keyboard \
     ros-jazzy-navigation2 \
     ros-jazzy-nav2-bringup \
+    ros-jazzy-nav2-map-server \
     ros-jazzy-slam-toolbox \
     ros-jazzy-vision-msgs \
     ros-jazzy-cv-bridge \

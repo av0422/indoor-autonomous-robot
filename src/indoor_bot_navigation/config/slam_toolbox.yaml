@@ -1,0 +1,28 @@
+slam_toolbox:
+  ros__parameters:
+    # Async mode publishes /map on new scans without blocking on pose-graph
+    # optimization, so mapping keeps up during live teleop driving.
+    use_sim_time: true
+
+    odom_frame: odom
+    # Matches the frame the diff-drive plugin actually publishes
+    # odom -> base_footprint TF for (see docs/INTERFACES.md), not the
+    # slam_toolbox default of base_link.
+    base_frame: base_footprint
+    map_frame: map
+    scan_topic: /scan
+    mode: mapping
+
+    # Matches the simulated /scan: 5 m max range, occupancy grid fine
+    # enough for a small indoor room.
+    resolution: 0.05
+    max_laser_range: 5.0
+
+    # Defaults (0.5 m / 0.5 rad) are too coarse for a small indoor room;
+    # tighter thresholds add scans to the graph more often for a denser,
+    # more accurate map at this scale.
+    minimum_travel_distance: 0.2
+    minimum_travel_heading: 0.2
+
+    # Corrects accumulated odometry drift over a full room traverse.
+    do_loop_closing: true
