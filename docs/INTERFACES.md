@@ -52,7 +52,7 @@ publishes it in sim, and Module B should key off
 | `conf_threshold` | |
 | `iou_threshold` | |
 | `input_size` | |
-| `target_classes` | TBD — owned by Module B |
+| `target_classes` | `['chair', 'potted plant', 'dining table', 'couch', 'backpack', 'suitcase', 'sports ball', 'bottle', 'person']` |
 | `max_depth_m` | |
 | `min_points_per_object` | |
 | `publish_annotated` | |

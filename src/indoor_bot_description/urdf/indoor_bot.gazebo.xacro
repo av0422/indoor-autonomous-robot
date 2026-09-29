@@ -31,6 +31,12 @@
     <mu2>0</mu2>
   </gazebo>
 
+  <!-- front caster: frictionless so it doesn't drag against the diff-drive motion -->
+  <gazebo reference="front_caster_link">
+    <mu1>0</mu1>
+    <mu2>0</mu2>
+  </gazebo>
+
   <!-- 2D LiDAR -->
   <gazebo reference="base_scan">
     <sensor name="lidar" type="gpu_lidar">

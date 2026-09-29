@@ -24,6 +24,10 @@ class DetectorNode(Node):
         self.declare_parameter('conf_threshold', 0.5)
         self.declare_parameter('iou_threshold', 0.45)
         self.declare_parameter('input_size', 320)
+        self.declare_parameter('target_classes', [
+            'chair', 'potted plant', 'dining table', 'couch', 'backpack',
+            'suitcase', 'sports ball', 'bottle', 'person',
+        ])
         self.declare_parameter('publish_annotated', True)
         self.declare_parameter('annotated_period_s', 0.5)
 
@@ -32,6 +36,7 @@ class DetectorNode(Node):
         self.conf_threshold = self.get_parameter('conf_threshold').value
         self.iou_threshold = self.get_parameter('iou_threshold').value
         self.input_size = self.get_parameter('input_size').value
+        self.target_classes = self.get_parameter('target_classes').value
         self.publish_annotated = self.get_parameter('publish_annotated').value
         self.annotated_period_s = self.get_parameter('annotated_period_s').value
 
@@ -57,6 +62,22 @@ class DetectorNode(Node):
         self.last_annotated = 0.0
         self.bridge = CvBridge()
         self.model = YOLO(self.model_path)
+
+        name_to_id = {name: idx for idx, name in self.model.names.items()}
+        for class_name in self.target_classes:
+            if class_name not in name_to_id:
+                self.get_logger().warning(f'Unknown target class: {class_name}')
+        self.class_ids = [
+            name_to_id[class_name] for class_name in self.target_classes
+            if class_name in name_to_id
+        ]
+        if not self.class_ids:
+            self.class_ids = None
+        resolved_names = (
+            [self.model.names[i] for i in self.class_ids] if self.class_ids else 'all'
+        )
+        self.get_logger().info(f'Detector target classes: {resolved_names}')
+
         self.busy = False
         self.frame_count = 0
         self.latencies = []
@@ -79,6 +100,7 @@ class DetectorNode(Node):
                 conf=self.conf_threshold,
                 iou=self.iou_threshold,
                 device=self.device,
+                classes=self.class_ids,
                 verbose=False
             )
             elapsed_ms = (time.perf_counter() - start) * 1000.0
