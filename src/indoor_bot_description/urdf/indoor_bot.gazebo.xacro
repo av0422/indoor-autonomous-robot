@@ -91,6 +91,61 @@
     </sensor>
   </gazebo>
 
+  <!-- Bounding-box cameras for training-data generation only (datagen.py):
+       same pose, resolution and FOV as rgbd_camera above, so pixel
+       coordinates line up with /camera/color/image_raw. Two box types are
+       needed, not one: visible_2d gives the true on-screen extent (what we
+       actually want to train on), full_2d gives the un-occluded extent
+       used only to compute a visibility ratio and reject mostly-hidden
+       objects. Requires the world's per-object gz-sim-label-system labels
+       (worlds/indoor_room_datagen.sdf) to report anything. Gated by the
+       datagen launch arg so normal simulation and the ablation are
+       unchanged when it is not set. -->
+  <xacro:if value="$(arg datagen)">
+    <gazebo reference="camera_link">
+      <sensor name="bbox_camera_visible" type="boundingbox_camera">
+        <pose>0 0 0 0 0 0</pose>
+        <topic>camera/bounding_box/visible</topic>
+        <gz_frame_id>camera_color_optical_frame</gz_frame_id>
+        <update_rate>10</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <camera>
+          <box_type>visible_2d</box_type>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>8.0</far>
+          </clip>
+        </camera>
+      </sensor>
+      <sensor name="bbox_camera_full" type="boundingbox_camera">
+        <pose>0 0 0 0 0 0</pose>
+        <topic>camera/bounding_box/full</topic>
+        <gz_frame_id>camera_color_optical_frame</gz_frame_id>
+        <update_rate>10</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <camera>
+          <box_type>full_2d</box_type>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>8.0</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:if>
+
   <!-- IMU -->
   <gazebo reference="imu_link">
     <sensor name="imu_sensor" type="imu">

@@ -3,6 +3,11 @@
 
   <xacro:include filename="$(find indoor_bot_description)/urdf/inertial_macros.xacro"/>
 
+  <!-- Adds a boundingbox_camera pair for training-data generation
+       (src/indoor_bot_evaluation/scripts/datagen.py) when true. Default
+       false leaves normal simulation and the ablation unchanged. -->
+  <xacro:arg name="datagen" default="false"/>
+
   <!-- ================= Properties ================= -->
 
   <!-- base -->

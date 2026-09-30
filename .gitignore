@@ -4,5 +4,12 @@ log/
 .venv/
 *.pt
 __pycache__/
-data/
+data/*
+!data/obstacle_dataset/
+data/obstacle_dataset/*
+!data/obstacle_dataset/README.md
 results/*.mcap
+results/world_check/
+results/datagen_run.log
+results/sim.log
+results/datagen_check.png

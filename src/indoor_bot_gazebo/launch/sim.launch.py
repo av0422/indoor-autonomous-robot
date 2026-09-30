@@ -5,9 +5,10 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, \
+    PythonExpression
 
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -18,7 +19,21 @@ def generate_launch_description():
     gazebo_pkg_share = get_package_share_directory('indoor_bot_gazebo')
     description_pkg_share = get_package_share_directory('indoor_bot_description')
 
-    world_path = os.path.join(gazebo_pkg_share, 'worlds', 'indoor_room.sdf')
+    declare_datagen_arg = DeclareLaunchArgument(
+        'datagen',
+        default_value='false',
+        description=(
+            'Load the labelled world and enable the bounding-box cameras used '
+            'by indoor_bot_evaluation/scripts/datagen.py. Leaves normal '
+            'simulation and the ablation unchanged when false.'
+        ),
+    )
+    datagen = LaunchConfiguration('datagen')
+
+    world_filename = PythonExpression(
+        ["'indoor_room_datagen.sdf' if '", datagen, "' == 'true' else 'indoor_room.sdf'"]
+    )
+    world_path = PathJoinSubstitution([gazebo_pkg_share, 'worlds', world_filename])
     xacro_file = os.path.join(description_pkg_share, 'urdf', 'indoor_bot.urdf.xacro')
     bridge_config = os.path.join(gazebo_pkg_share, 'config', 'bridge.yaml')
 
@@ -31,12 +46,12 @@ def generate_launch_description():
             ),
         ),
         launch_arguments={
-            'gz_args': f'-s -r --headless-rendering {world_path}',
+            'gz_args': ['-s -r --headless-rendering ', world_path],
         }.items(),
     )
 
     robot_description = ParameterValue(
-        Command(['xacro ', xacro_file]),
+        Command(['xacro ', xacro_file, ' datagen:=', datagen]),
         value_type=str,
     )
 
@@ -76,6 +91,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        declare_datagen_arg,
         gz_sim,
         robot_state_publisher_node,
         spawn_robot_node,
