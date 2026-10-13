@@ -4,10 +4,12 @@ A simulated differential-drive robot that maps an indoor space, navigates to a g
 with Nav2, and uses camera-based object detection to avoid obstacles its LiDAR
 cannot see.
 
-> **Status: in development (Milestone 0 of 6).** The robot runs in Gazebo with
-> working LiDAR, RGB-D camera and IMU, and drives on command. Navigation and
-> perception are not implemented yet. Results tables below are intentionally
-> empty until the experiments in M6 have actually been run.
+> **Status: in development (Milestone 2 of 6).** The robot runs in Gazebo with
+> working LiDAR, RGB-D camera and IMU; `slam_toolbox` builds an occupancy grid
+> map of the room; and a YOLO detector node publishes `Detection2DArray` from
+> the RGB-D camera. Nav2 navigation, perception feeding the costmap, and the
+> on/off experiments are not implemented yet. Results tables below are
+> intentionally empty until the experiments in M6 have actually been run.
 
 ## The idea
 
@@ -112,7 +114,7 @@ inferred from LiDAR ranges.
 
 ## Demo
 
-<!-- Added at M6. -->
+![SLAM occupancy grid of the room: walls and tall furniture are visible, but not the three objects below 0.20 m, by design.](docs/images/map.png)
 
 ## Repository layout
 
@@ -155,7 +157,7 @@ load-bearing: `numpy<2`, because `cv_bridge` is compiled against numpy 1.x, and
 |---|---|---|
 | M0 | Workspace, interface contract, CI | done |
 | M1 | Robot in simulation, sensors publishing | done |
-| M2 | SLAM map, detector publishing detections | planned |
+| M2 | SLAM map, detector publishing detections | in progress |
 | M3 | Autonomous navigation to a goal, 3D projection | planned |
 | M4 | Perception integrated into the costmap | planned |
 | M5 | Experiment runner and metrics logging | planned |
