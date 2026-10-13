@@ -4,6 +4,7 @@ log/
 .venv/
 *.pt
 __pycache__/
+*.pyc
 data/*
 !data/obstacle_dataset/
 data/obstacle_dataset/*

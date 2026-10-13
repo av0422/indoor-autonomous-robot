@@ -100,3 +100,13 @@ A test launch of a second software-rendered gz sim while the main sim was
 running crashed the main instance. Cause: both instances joined the same
 transport partition. Fix: set a distinct GZ_PARTITION for any parallel
 test instance, or stop the main sim first.
+
+## colcon build fails on scripts/__pycache__
+
+setup.py globbed scripts/*, which also matched the __pycache__ folder
+created whenever a script in scripts/ was run. colcon then tried to copy
+a directory as a file, failed indoor_bot_evaluation and aborted
+indoor_bot_perception. Fix: restrict the glob to *.py and *.sh, and
+delete scripts/__pycache__. Check: run a script, then rebuild; it must
+still finish with 7 packages.
+
