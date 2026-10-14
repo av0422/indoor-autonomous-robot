@@ -26,6 +26,13 @@ from launch_ros.actions import Node
 
 TF_REMAPPINGS = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
 CMD_VEL_REMAPPINGS = TF_REMAPPINGS + [('cmd_vel', 'cmd_vel_nav')]
+# velocity_smoother takes controller_server's output on its default input
+# ('cmd_vel', remapped above to 'cmd_vel_nav') but, unlike every other
+# node here, does not publish its smoothed result back on 'cmd_vel' by
+# default — it publishes 'cmd_vel_smoothed', which nothing else subscribes
+# to. The ros_gz_bridge only bridges plain '/cmd_vel' (Twist, unstamped;
+# docs/INTERFACES.md gotcha a), so that output needs its own remap too.
+VELOCITY_SMOOTHER_REMAPPINGS = CMD_VEL_REMAPPINGS + [('cmd_vel_smoothed', 'cmd_vel')]
 
 NAVIGATION_LIFECYCLE_NODES = [
     'controller_server',
@@ -140,7 +147,7 @@ def generate_launch_description():
         name='velocity_smoother',
         output='screen',
         parameters=node_parameters,
-        remappings=CMD_VEL_REMAPPINGS,
+        remappings=VELOCITY_SMOOTHER_REMAPPINGS,
     )
     lifecycle_manager_node = Node(
         package='nav2_lifecycle_manager',
