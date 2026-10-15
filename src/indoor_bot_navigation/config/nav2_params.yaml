@@ -1,0 +1,315 @@
+# Nav2 parameters for indoor_bot (Milestone 3).
+#
+# NavFn planner and DWB controller, not the Smac planner / MPPI controller,
+# because this project has no GPU and runs inference on the same CPU
+# (docs/README.md "Hardware constraints"). The costmaps below use only the
+# LiDAR obstacle layer on /scan; the perception point-cloud observation
+# source described in docs/INTERFACES.md is added in Milestone 4, not here.
+# robot_base_frame is base_footprint everywhere, not the Nav2-default
+# base_link, to match this robot's TF tree (docs/INTERFACES.md).
+# use_sim_time is true in every node: the whole stack runs against Gazebo's
+# /clock.
+
+amcl:
+  ros__parameters:
+    use_sim_time: true
+    base_frame_id: "base_footprint"
+    odom_frame_id: "odom"
+    global_frame_id: "map"
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    scan_topic: scan
+    laser_model_type: "likelihood_field"
+    laser_min_range: -1.0
+    # Matches the simulated LiDAR's 5 m range (docs/INTERFACES.md); default
+    # is 100.0, which would let far-field noise weigh into localization.
+    laser_max_range: 5.0
+    max_beams: 60
+    min_particles: 500
+    max_particles: 2000
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+    do_beamskip: false
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    sigma_hit: 0.2
+    z_hit: 0.5
+    z_max: 0.05
+    z_rand: 0.5
+    z_short: 0.05
+    update_min_a: 0.2
+    update_min_d: 0.25
+    resample_interval: 1
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    pf_err: 0.05
+    pf_z: 0.99
+    save_pose_rate: 0.5
+    tf_broadcast: true
+    transform_tolerance: 1.0
+    # Non-default: this is a scripted headless sim with no rviz "2D Pose
+    # Estimate" click, so AMCL must start from a known pose instead of
+    # waiting indefinitely. initial_pose matches the Gazebo spawn point.
+    set_initial_pose: true
+    initial_pose:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      yaw: 0.0
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true
+    global_frame: map
+    robot_base_frame: base_footprint
+    odom_topic: /odom
+    bt_loop_duration: 10
+    default_server_timeout: 20
+
+controller_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 20.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    # Non-default (Jazzy's default is true): this project's ros_gz_bridge
+    # maps /cmd_vel to geometry_msgs/msg/Twist, unstamped, to match the
+    # gz-sim-diff-drive-system plugin (docs/INTERFACES.md gotcha a).
+    enable_stamped_cmd_vel: false
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugins: ["general_goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+    general_goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      stateful: true
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 0.25
+
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: true
+      min_vel_x: 0.0
+      min_vel_y: 0.0
+      min_vel_theta: 0.0
+      # Non-default: task-specified safe operating speed for this small
+      # (0.30 x 0.24 m) indoor robot in an 8x8 m room (default ~0.26 m/s).
+      max_vel_x: 0.3
+      max_vel_y: 0.0
+      # Non-default: task-specified max angular speed (default ~1.0 rad/s).
+      max_vel_theta: 0.8
+      min_speed_xy: 0.0
+      max_speed_xy: 0.3
+      min_speed_theta: 0.0
+      acc_lim_x: 2.5
+      acc_lim_y: 0.0
+      acc_lim_theta: 3.2
+      decel_lim_x: -2.5
+      decel_lim_y: 0.0
+      decel_lim_theta: -3.2
+      vx_samples: 20
+      vy_samples: 5
+      vtheta_samples: 20
+      sim_time: 1.7
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      transform_tolerance: 0.2
+      xy_goal_tolerance: 0.15
+      trans_stopped_velocity: 0.25
+      short_circuit_trajectory_evaluation: true
+      stateful: true
+      critics: [
+        "RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign",
+        "PathAlign", "PathDist", "GoalDist",
+      ]
+      BaseObstacle.scale: 0.02
+      PathAlign.scale: 32.0
+      PathAlign.forward_point_distance: 0.1
+      GoalAlign.scale: 24.0
+      GoalAlign.forward_point_distance: 0.1
+      PathDist.scale: 32.0
+      GoalDist.scale: 24.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
+
+# Caps the controller_server -> velocity_smoother -> /cmd_vel chain at the
+# same limits as FollowPath above, so smoothing never re-expands past them.
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true
+    # Non-default, same reason as controller_server.enable_stamped_cmd_vel.
+    enable_stamped_cmd_vel: false
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.3, 0.0, 0.8]
+    min_velocity: [-0.3, 0.0, -0.8]
+    max_accel: [2.5, 0.0, 3.2]
+    max_decel: [-2.5, 0.0, -3.2]
+    odom_topic: "odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 20.0
+    planner_plugins: ["GridBased"]
+    GridBased:
+      # Non-default: NavFn instead of the Smac planner, which is
+      # noticeably more CPU-hungry (see docs/ARCHITECTURE.md).
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: true
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "wait"]
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    global_frame: odom
+    robot_base_frame: base_footprint
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+    # Non-default: matches controller_server's max angular speed cap.
+    max_rotational_vel: 0.8
+    min_rotational_vel: 0.2
+    rotational_acc_lim: 3.2
+
+map_server:
+  ros__parameters:
+    use_sim_time: true
+    # yaml_filename is intentionally left unset here: navigation.launch.py
+    # passes it via the 'map' launch argument to nav2_bringup's
+    # localization_launch.py, which points it at this package's saved
+    # maps/indoor_room.yaml by default.
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true
+      global_frame: odom
+      robot_base_frame: base_footprint
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      rolling_window: true
+      width: 3
+      height: 3
+      resolution: 0.05
+      # Non-default: half the robot's longer dimension (0.30 m) plus a
+      # small margin (default 0.1 m, too tight for this footprint).
+      robot_radius: 0.17
+      plugins: ["obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /scan
+          data_type: "LaserScan"
+          clearing: true
+          marking: true
+          max_obstacle_height: 2.0
+          obstacle_min_range: 0.0
+          # Non-default: matches the simulated LiDAR's 5 m range (default
+          # 2.5 m for obstacle_max_range, 3.0 m for raytrace_max_range).
+          obstacle_max_range: 5.0
+          raytrace_min_range: 0.0
+          raytrace_max_range: 5.0
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        # Non-default: tuned down from the 0.55 m default so the inflated
+        # footprint doesn't swallow the gaps between furniture in the
+        # 8x8 m room.
+        inflation_radius: 0.25
+      always_send_full_costmap: true
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      global_frame: map
+      robot_base_frame: base_footprint
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      resolution: 0.05
+      track_unknown_space: true
+      robot_radius: 0.17
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /scan
+          data_type: "LaserScan"
+          clearing: true
+          marking: true
+          max_obstacle_height: 2.0
+          obstacle_min_range: 0.0
+          obstacle_max_range: 5.0
+          raytrace_min_range: 0.0
+          raytrace_max_range: 5.0
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.25
+      always_send_full_costmap: true
+
+# node_names/autostart here document intent; nav2_bringup's
+# localization_launch.py and navigation_launch.py set their own lifecycle
+# manager node lists directly and take autostart from the launch argument
+# (also true — see navigation.launch.py), so these are not read at launch.
+lifecycle_manager_localization:
+  ros__parameters:
+    use_sim_time: true
+    autostart: true
+    node_names: ["map_server", "amcl"]
+
+lifecycle_manager_navigation:
+  ros__parameters:
+    use_sim_time: true
+    autostart: true
+    node_names: [
+      "controller_server", "smoother_server", "planner_server",
+      "behavior_server", "bt_navigator", "waypoint_follower",
+      "velocity_smoother",
+    ]
