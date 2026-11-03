@@ -1,6 +1,7 @@
 detector_node:
   ros__parameters:
-    model_path: yolo11n.pt
+    model_path: /ws/models/obstacle_v1.pt
+    target_classes: [obstacle]
     device: cpu
     conf_threshold: 0.5
     iou_threshold: 0.45
