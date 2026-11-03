@@ -32,8 +32,8 @@ Model only (`best.pt`, 100 simulated test frames, 320 px, CPU, MacBook Air M4,
 Docker, simulator not running): p50 23.8 ms, p95 24.4 ms, mean 24.1 ms
 (about 41 Hz sustainable).
 
-Inside the ROS node with the simulator running the cost is higher because
-Gazebo shares the CPU; measure it in the integration step below.
+In the ROS node, replaying a recorded bag with the simulator off:
+p50 28.3 ms, p95 32.8 ms.
 
 ## Reading the results
 
