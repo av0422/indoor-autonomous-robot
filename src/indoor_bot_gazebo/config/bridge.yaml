@@ -59,6 +59,13 @@
   gz_type_name: gz.msgs.CameraInfo
   direction: GZ_TO_ROS
 
+# Ground-truth collisions from the base_contact sensor (evaluation only).
+- ros_topic_name: /contact
+  gz_topic_name: /contact
+  ros_type_name: ros_gz_interfaces/msg/Contacts
+  gz_type_name: gz.msgs.Contacts
+  direction: GZ_TO_ROS
+
 # Training-data ground truth (datagen.py). Only published when the sim is
 # launched with datagen:=true; otherwise these topics simply carry nothing.
 - ros_topic_name: /camera/bounding_box/visible
