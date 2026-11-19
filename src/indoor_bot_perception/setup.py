@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'detector_node = indoor_bot_perception.detector_node:main',
+            'projector_node = indoor_bot_perception.projector_node:main',
         ],
     },
 )
