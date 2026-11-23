@@ -34,7 +34,7 @@ FLOOR_COLLISION_MARKER = 'ground_plane'
 CSV_COLUMNS = [
     'trial', 'seed', 'condition', 'success', 'time_to_goal', 'path_length_m',
     'collision_count', 'recoveries', 'final_distance_error', 'real_time_factor',
-    'status',
+    'status', 'pair',
 ]
 
 STATUS_NAMES = {
@@ -64,18 +64,22 @@ class TrialRunner(Node):
         self.declare_parameter('output', 'results/trials.csv')
         self.declare_parameter('goals_file', '')
         self.declare_parameter('timeout_s', 90.0)
+        self.declare_parameter('pair_index', -1)
 
         self.trials = int(self.get_parameter('trials').value)
         self.seed = int(self.get_parameter('seed').value)
         self.condition = self.get_parameter('condition').value
         self.output = self.get_parameter('output').value
         self.timeout_s = float(self.get_parameter('timeout_s').value)
+        self.pair_index = int(self.get_parameter('pair_index').value)
         goals_file = self.get_parameter('goals_file').value or os.path.join(
             get_package_share_directory('indoor_bot_evaluation'), 'config', 'goals.yaml')
         with open(goals_file) as handle:
             self.pairs = yaml.safe_load(handle)['pairs']
         if not self.pairs:
             raise ValueError(f'No start/goal pairs in {goals_file}')
+        if self.pair_index >= len(self.pairs):
+            raise ValueError(f'pair_index {self.pair_index} out of range')
 
         self.trial_active = False
         self.collision_count = 0
@@ -251,13 +255,15 @@ class TrialRunner(Node):
 
     def run_trial(self, index):
         """Run one trial and return its CSV row as a dict."""
-        pair = self.pairs[index % len(self.pairs)]
+        pair_number = self.pair_index if self.pair_index >= 0 else index % len(self.pairs)
+        pair = self.pairs[pair_number]
         rng = random.Random(self.seed * 1000003 + index)
         jitter = rng.uniform(-START_YAW_JITTER_RAD, START_YAW_JITTER_RAD)
         start = (pair['start']['x'], pair['start']['y'], pair['start']['yaw'] + jitter)
         goal = pair['goal']
         self.get_logger().info(
-            f'Trial {index}: {pair["name"]}, start yaw jitter {math.degrees(jitter):+.1f} deg')
+            f'Trial {index}: pair {pair_number} ({pair["name"]}), '
+            f'start yaw jitter {math.degrees(jitter):+.1f} deg')
 
         self.reset_robot(start)
 
@@ -275,6 +281,7 @@ class TrialRunner(Node):
             'success': 0, 'time_to_goal': 0.0, 'path_length_m': 0.0,
             'collision_count': 0, 'recoveries': 0,
             'final_distance_error': '', 'real_time_factor': '', 'status': 'REJECTED',
+            'pair': pair_number,
         }
 
         goal_msg = NavigateToPose.Goal()

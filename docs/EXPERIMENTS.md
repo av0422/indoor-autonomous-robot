@@ -20,6 +20,7 @@ ros2 launch indoor_bot_bringup experiment.launch.py \
 | `condition` | `unspecified` | Label copied into the CSV. It does not switch anything: toggling perception is done separately (`/perception/set_enabled`) |
 | `trials` | `4` | Number of trials |
 | `seed` | `0` | Seed for the start-yaw perturbation |
+| `pair_index` | `-1` | If 0 or more, every trial uses that pair of `goals.yaml` (0-based); `-1` cycles through the pairs |
 | `output` | `results/trials.csv` | CSV file; rows are appended, the header is written once |
 
 The launch starts Gazebo, Nav2 and Foxglove (as `nav.launch.py`) and the
@@ -36,10 +37,14 @@ takes `goals_file` (default: the installed `config/goals.yaml`) and `timeout_s`
    `timeout_s` simulated seconds pass (the goal is then cancelled and the
    status is `TIMEOUT`).
 
-Trial `i` uses pair `i mod 4` from `config/goals.yaml`. Each pair is a straight
-line that passes within 0.25 m of one low object; start and goal are on free
-floor and at least 0.6 m from every object centre. The seed only perturbs the
-start yaw by up to +-10 degrees (`random.Random(seed * 1000003 + i)`), so a
+Trial `i` uses pair `i mod 5` from `config/goals.yaml` unless `pair_index` is
+set. Pairs 0 to 3 are straight lines that each pass within 0.25 m of one low
+object; start and goal are on free
+floor and at least 0.6 m from every object centre. Pair 4 (`control`) crosses
+no object: its line is at least 1.4 m from every object centre and wall face, so
+`collision_count` should be 0 on it. Run it alone with `pair_index:=4`.
+
+The seed only perturbs the start yaw by up to +-10 degrees (`random.Random(seed * 1000003 + i)`), so a
 trial is reproducible from `(seed, i)`.
 
 ## CSV columns
@@ -57,6 +62,7 @@ trial is reproducible from `(seed, i)`.
 | `final_distance_error` | m | Distance from the goal point to the map-frame position of `base_footprint` (TF `map` -> `base_footprint`, i.e. the localisation estimate Nav2 itself uses) when the trial ends |
 | `real_time_factor` | | Simulated seconds elapsed divided by wall-clock seconds elapsed over the trial |
 | `status` | | `SUCCEEDED`, `ABORTED`, `CANCELED`, `TIMEOUT` or `REJECTED` |
+| `pair` | | 0-based index of the `goals.yaml` pair used |
 
 All timing uses the `/clock` from Gazebo (`use_sim_time: true`), so
 `time_to_goal` is in simulated seconds and `real_time_factor` says how far

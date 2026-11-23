@@ -36,6 +36,9 @@ def generate_launch_description():
             'seed', default_value='0',
             description='Seed for the start-yaw perturbation'),
         DeclareLaunchArgument(
+            'pair_index', default_value='-1',
+            description='Use only this goals.yaml pair (0-based); -1 cycles through all'),
+        DeclareLaunchArgument(
             'output', default_value='results/trials.csv',
             description='CSV file the trial rows are appended to'),
     ]
@@ -56,6 +59,7 @@ def generate_launch_description():
             'condition': ParameterValue(LaunchConfiguration('condition'), value_type=str),
             'trials': ParameterValue(LaunchConfiguration('trials'), value_type=int),
             'seed': ParameterValue(LaunchConfiguration('seed'), value_type=int),
+            'pair_index': ParameterValue(LaunchConfiguration('pair_index'), value_type=int),
             'output': ParameterValue(LaunchConfiguration('output'), value_type=str),
         }],
     )
