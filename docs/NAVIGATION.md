@@ -2,9 +2,10 @@
 
 `indoor_bot_navigation/config/nav2_params.yaml` configures AMCL localizing
 against the map saved in `docs/MAPPING.md`, a NavFn global planner, and a
-DWB local controller capped at 0.3 m/s / 0.8 rad/s. The costmaps use only
-the LiDAR obstacle layer on `/scan` — the perception point-cloud source
-from `docs/INTERFACES.md` is added in Milestone 4, not here.
+DWB local controller capped at 0.3 m/s / 0.8 rad/s. The costmaps' obstacle
+layers use two sources: LiDAR on `/scan` (marking and clearing) and the
+perception point cloud on `/perception/obstacle_cloud` from
+`docs/INTERFACES.md` (marking only).
 
 ## Running a navigation session
 
