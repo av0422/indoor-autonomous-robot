@@ -146,6 +146,27 @@
     </gazebo>
   </xacro:if>
 
+  <!-- Ground-truth collision sensor for the evaluation (docs/EXPERIMENTS.md).
+       Reports contacts on the base collision only; the wheels and casters are
+       separate collisions, so rolling on the floor does not trigger it. The
+       low objects sit below the LiDAR plane, so this is the only reliable
+       collision signal. The collision name is the one sdformat generates when
+       it lumps base_link into base_footprint (fixed joint). The topic must be
+       set inside <contact>; the sensor-level <topic> alone is not used for
+       contact sensors. Needs the
+       gz-sim-contact-system plugin in the world. -->
+  <gazebo reference="base_link">
+    <sensor name="base_contact" type="contact">
+      <always_on>true</always_on>
+      <update_rate>50</update_rate>
+      <topic>contact</topic>
+      <contact>
+        <collision>base_footprint_fixed_joint_lump__base_link_collision</collision>
+        <topic>contact</topic>
+      </contact>
+    </sensor>
+  </gazebo>
+
   <!-- IMU -->
   <gazebo reference="imu_link">
     <sensor name="imu_sensor" type="imu">

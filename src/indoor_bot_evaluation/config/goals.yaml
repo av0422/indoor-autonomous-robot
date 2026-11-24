@@ -1,0 +1,38 @@
+# Start/goal pairs for the navigation trials (docs/EXPERIMENTS.md).
+#
+# Each pair is a straight line that passes within 0.25 m of one low object
+# (below the 0.20 m LiDAR plane), so a LiDAR-only planner drives into it.
+# Start and goal points are on free floor of the saved map and at least 0.6 m
+# from every object centre. Trial i uses pair i mod len(pairs). yaw is the
+# direction of travel in radians (map frame); the runner perturbs the start
+# yaw by up to +-10 deg from the seed.
+#
+# The last pair (control) crosses no object: its line stays at least 1.4 m from
+# every object centre and wall face, so the contact sensor should read 0.
+#
+# object_offset_m is the distance from the low object's centre to the line.
+pairs:
+  - name: backpack_west_east
+    object: low_backpack
+    object_offset_m: 0.05
+    start: {x: -0.2, y: 0.35, yaw: 0.0}
+    goal: {x: 2.4, y: 0.35, yaw: 0.0}
+  - name: suitcase_west_east
+    object: low_suitcase
+    object_offset_m: 0.01
+    start: {x: -2.4, y: 0.9, yaw: -0.071}
+    goal: {x: 0.4, y: 0.7, yaw: -0.071}
+  - name: ball_southwest_northeast
+    object: low_sports_ball
+    object_offset_m: 0.09
+    start: {x: -0.3, y: -0.7, yaw: 0.223}
+    goal: {x: 1.9, y: -0.2, yaw: 0.223}
+  - name: backpack_northwest_southeast
+    object: low_backpack
+    object_offset_m: 0.15
+    start: {x: 0.4, y: 1.2, yaw: -0.719}
+    goal: {x: 2.0, y: -0.2, yaw: -0.719}
+  - name: control
+    object: none
+    start: {x: 0.0, y: 2.6, yaw: 0.0}
+    goal: {x: 2.6, y: 2.6, yaw: 0.0}

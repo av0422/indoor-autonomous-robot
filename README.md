@@ -4,12 +4,15 @@ A simulated differential-drive robot that maps an indoor space, navigates to a g
 with Nav2, and uses camera-based object detection to avoid obstacles its LiDAR
 cannot see.
 
-> **Status: in development (Milestone 2 of 6).** The robot runs in Gazebo with
-> working LiDAR, RGB-D camera and IMU; `slam_toolbox` builds an occupancy grid
-> map of the room; and a YOLO detector node publishes `Detection2DArray` from
-> the RGB-D camera. Nav2 navigation, perception feeding the costmap, and the
-> on/off experiments are not implemented yet. Results tables below are
-> intentionally empty until the experiments in M6 have actually been run.
+> **Status: in development (Milestone 4 of 6).** The robot runs in Gazebo with
+> a LiDAR, an RGB-D camera, an IMU and a contact sensor; `slam_toolbox` builds
+> an occupancy grid map of the room; Nav2 with AMCL localizes on that map and
+> reaches goals; and a fine-tuned single-class obstacle detector feeds a
+> projector node that publishes `/perception/obstacle_cloud`, which is wired
+> into both costmaps as a second observation source. An evaluation harness
+> exists (trial runner, goals file, contact-sensor collision counts). The
+> perception ON vs OFF trial results do not exist yet. Results tables below
+> are intentionally empty until the experiments in M6 have actually been run.
 
 ## The idea
 
@@ -41,10 +44,12 @@ Gazebo Harmonic
    └────┬──────────────┘    │   /perception/obstacle_cloud
         │                   │
         └─────────┬─────────┘
+          /scan ──┘  + /perception/obstacle_cloud
                   ↓
-   Nav2 costmap — obstacle layer, two observation sources
+   Nav2 costmaps — obstacle layer, two observation sources:
+   /scan (LiDAR) and /perception/obstacle_cloud
                   ↓
-   slam_toolbox → map→odom transform
+   AMCL on the saved map → map→odom transform
                   ↓
    Nav2: planner_server → controller_server → /cmd_vel
                   ↓
@@ -104,13 +109,28 @@ Navigation, 20 trials per condition, fixed start/goal pairs with logged seeds:
 
 Detection, held-out set of simulated frames:
 
+Test split, 184 images, one room:
+
 | Metric | Value |
 |---|---|
-| mAP@0.5 | — |
+| Precision (custom matching, conf 0.25, IoU 0.3) | 0.862 |
+| Recall (custom matching, conf 0.25, IoU 0.3) | 0.973 |
+| mAP@0.5 (`yolo val`) | 0.972 |
 | Inference latency, p50 / p95 | — |
 
 Collisions are counted from a Gazebo contact sensor on the robot base rather than
 inferred from LiDAR ranges.
+
+## Findings so far
+
+- The robot pitched 13.5 degrees until a front caster was added.
+- Stock YOLO11n gave false positives and low scores on simulated frames, so a
+  single-class detector was fine-tuned on simulator-labelled renders.
+- The map shows walls and tall furniture but not the three objects below
+  0.20 m, by design.
+- Low objects are static, so collisions are counted from a contact sensor, not
+  from object movement.
+- Labels come from Gazebo's bounding-box camera.
 
 ## Demo
 
@@ -123,10 +143,10 @@ src/
   indoor_bot_description/   robot URDF, sensors, frames
   indoor_bot_gazebo/        worlds, models, spawn and bridge launch
   indoor_bot_navigation/    Nav2 and slam_toolbox parameters, maps
-  indoor_bot_bringup/       top-level launch files
+  indoor_bot_bringup/       launch files: mapping, nav, teleop, experiment
   indoor_bot_perception/    detector and 3D projection nodes
   indoor_bot_interfaces/    custom messages and actions
-  indoor_bot_evaluation/    metrics logging, experiment runner, analysis
+  indoor_bot_evaluation/    trial_runner, config/goals.yaml, scripts
 docs/
   INTERFACES.md             the contract between the two modules
   ARCHITECTURE.md           design decisions and trade-offs
@@ -157,11 +177,11 @@ load-bearing: `numpy<2`, because `cv_bridge` is compiled against numpy 1.x, and
 |---|---|---|
 | M0 | Workspace, interface contract, CI | done |
 | M1 | Robot in simulation, sensors publishing | done |
-| M2 | SLAM map, detector publishing detections | in progress |
-| M3 | Autonomous navigation to a goal, 3D projection | planned |
-| M4 | Perception integrated into the costmap | planned |
-| M5 | Experiment runner and metrics logging | planned |
-| M6 | Experiments, analysis, write-up | planned |
+| M2 | SLAM map, detector publishing detections | done |
+| M3 | Autonomous navigation to a goal, 3D projection | done |
+| M4 | Perception integrated into the costmap | done, checked by hand only |
+| M5 | Experiment runner and metrics logging | done |
+| M6 | Experiments, analysis, write-up | in progress |
 
 ## Licence
 

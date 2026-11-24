@@ -2,9 +2,10 @@
 #
 # NavFn planner and DWB controller, not the Smac planner / MPPI controller,
 # because this project has no GPU and runs inference on the same CPU
-# (docs/README.md "Hardware constraints"). The costmaps below use only the
-# LiDAR obstacle layer on /scan; the perception point-cloud observation
-# source described in docs/INTERFACES.md is added in Milestone 4, not here.
+# (docs/README.md "Hardware constraints"). The costmaps below use two
+# obstacle-layer sources: LiDAR /scan (marking + clearing) and the
+# perception point cloud /perception/obstacle_cloud (marking only,
+# described in docs/INTERFACES.md).
 # robot_base_frame is base_footprint everywhere, not the Nav2-default
 # base_link, to match this robot's TF tree (docs/INTERFACES.md).
 # use_sim_time is true in every node: the whole stack runs against Gazebo's
@@ -237,7 +238,7 @@ local_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
-        observation_sources: scan
+        observation_sources: scan perception
         scan:
           topic: /scan
           data_type: "LaserScan"
@@ -250,6 +251,16 @@ local_costmap:
           obstacle_max_range: 5.0
           raytrace_min_range: 0.0
           raytrace_max_range: 5.0
+        perception:
+          topic: /perception/obstacle_cloud
+          data_type: "PointCloud2"
+          marking: true
+          clearing: false
+          min_obstacle_height: 0.02
+          max_obstacle_height: 1.0
+          obstacle_max_range: 4.0
+          obstacle_min_range: 0.2
+          expected_update_rate: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
@@ -277,7 +288,7 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
-        observation_sources: scan
+        observation_sources: scan perception
         scan:
           topic: /scan
           data_type: "LaserScan"
@@ -288,6 +299,16 @@ global_costmap:
           obstacle_max_range: 5.0
           raytrace_min_range: 0.0
           raytrace_max_range: 5.0
+        perception:
+          topic: /perception/obstacle_cloud
+          data_type: "PointCloud2"
+          marking: true
+          clearing: false
+          min_obstacle_height: 0.02
+          max_obstacle_height: 1.0
+          obstacle_max_range: 4.0
+          obstacle_min_range: 0.2
+          expected_update_rate: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0

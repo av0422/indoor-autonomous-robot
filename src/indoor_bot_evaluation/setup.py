@@ -16,6 +16,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'scripts'),
             glob('scripts/*.py') + glob('scripts/*.sh')),
+        (os.path.join('share', package_name, 'config'),
+            glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -26,6 +28,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'trial_runner = indoor_bot_evaluation.trial_runner:main',
         ],
     },
 )
