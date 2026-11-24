@@ -1,0 +1,3 @@
+trial,seed,condition,success,time_to_goal,path_length_m,collision_count,recoveries,final_distance_error,real_time_factor,status,pair
+0,1,control,1,9.935,2.289,0,0,0.171,0.927,SUCCEEDED,4
+1,1,control,1,10.161,2.226,0,0,0.156,0.885,SUCCEEDED,4
