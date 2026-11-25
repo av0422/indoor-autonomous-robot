@@ -1,0 +1,11 @@
+trial,seed,condition,success,time_to_goal,path_length_m,collision_count,recoveries,final_distance_error,real_time_factor,status,pair
+0,1,on,1,11.764,2.53,0,0,0.147,0.747,SUCCEEDED,0
+1,1,on,1,12.751,2.577,0,0,0.146,0.819,SUCCEEDED,1
+2,1,on,1,9.254,1.933,0,0,0.145,0.828,SUCCEEDED,2
+3,1,on,1,10.314,2.116,2,0,0.147,0.837,SUCCEEDED,3
+4,1,on,1,10.41,2.264,0,0,0.145,0.854,SUCCEEDED,4
+5,1,on,1,11.491,2.361,0,0,0.144,0.852,SUCCEEDED,0
+6,1,on,1,12.934,2.875,0,0,0.141,0.86,SUCCEEDED,1
+7,1,on,1,8.824,2.119,0,0,0.135,0.822,SUCCEEDED,2
+8,1,on,1,15.0,2.181,1,0,0.144,0.841,SUCCEEDED,3
+9,1,on,1,10.468,2.264,0,0,0.151,0.87,SUCCEEDED,4
