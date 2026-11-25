@@ -4,15 +4,14 @@ A simulated differential-drive robot that maps an indoor space, navigates to a g
 with Nav2, and uses camera-based object detection to avoid obstacles its LiDAR
 cannot see.
 
-> **Status: in development (Milestone 4 of 6).** The robot runs in Gazebo with
+> **Status: in development (Milestone 6 of 6).** The robot runs in Gazebo with
 > a LiDAR, an RGB-D camera, an IMU and a contact sensor; `slam_toolbox` builds
 > an occupancy grid map of the room; Nav2 with AMCL localizes on that map and
 > reaches goals; and a fine-tuned single-class obstacle detector feeds a
 > projector node that publishes `/perception/obstacle_cloud`, which is wired
 > into both costmaps as a second observation source. An evaluation harness
 > exists (trial runner, goals file, contact-sensor collision counts). The
-> perception ON vs OFF trial results do not exist yet. Results tables below
-> are intentionally empty until the experiments in M6 have actually been run.
+> perception ON vs OFF experiments have been run; the write-up is in progress.
 
 ## The idea
 
@@ -53,7 +52,7 @@ Gazebo Harmonic
                   ↓
    Nav2: planner_server → controller_server → /cmd_vel
                   ↓
-   metrics_logger → CSV
+   trial_runner → CSV
 ```
 
 The perception and navigation halves communicate only through the topics defined in
@@ -97,16 +96,6 @@ These are limits worked around deliberately, not defaults left unexamined.
 
 ## Results
 
-<!-- Filled in at M6. Empty until the trials have actually been run. -->
-
-Navigation, 20 trials per condition, fixed start/goal pairs with logged seeds:
-
-| Condition | Success rate | Collisions | Time to goal (sim s) | Path length (m) |
-|---|---|---|---|---|
-| LiDAR only | — | — | — | — |
-| LiDAR + perception | — | — | — | — |
-| LiDAR + perception, low obstacles | — | — | — | — |
-
 Detection, held-out set of simulated frames:
 
 Test split, 184 images, one room:
@@ -116,21 +105,71 @@ Test split, 184 images, one room:
 | Precision (custom matching, conf 0.25, IoU 0.3) | 0.862 |
 | Recall (custom matching, conf 0.25, IoU 0.3) | 0.973 |
 | mAP@0.5 (`yolo val`) | 0.972 |
-| Inference latency, p50 / p95 | — |
+| mAP@0.5:0.95 (`yolo val`) | 0.875 |
+| Inference latency, model only, p50 / p95 | 23.8 ms / 24.4 ms |
+| Inference latency, inside the ROS node, p50 / p95 | 28.3 ms / 32.8 ms |
 
 Collisions are counted from a Gazebo contact sensor on the robot base rather than
 inferred from LiDAR ranges.
 
-## Findings so far
+## Navigation results
 
+10 trials per run: 5 routes, 2 repeats each, seed 1.
+
+| Run | Success | Collisions (total) | Trials with a collision | Time to goal (s) | Path (m) | Recoveries |
+|---|---|---|---|---|---|---|
+| OFF (LiDAR only) | 10/10 | 14 | 8 | 10.3 ± 1.7 | 2.22 ± 0.31 | 0 |
+| ON run 1 (preliminary) | 9/10 | 9 | 5 | 20.2 ± 17.8 | 2.96 ± 2.33 | 31 |
+| ON rerun (clean) | 10/10 | 3 | 2 | 11.3 ± 1.9 | 2.32 ± 0.27 | 0 |
+
+Time and path are mean ± standard deviation over successful trials only (ON
+run 1 excludes the aborted trial 1).
+
+Collisions per route (total over the 2 repeats):
+
+| Run | backpack W-E | suitcase W-E | ball SW-NE | backpack NW-SE | control |
+|---|---|---|---|---|---|
+| OFF | 2 | 8 | 2 | 2 | 0 |
+| ON run 1 | 1 | 0 | 1 | 2 | 5 |
+| ON rerun | 0 | 0 | 0 | 3 | 0 |
+
+![Collisions per route for OFF, ON run 1 and ON rerun.](docs/images/collisions_by_pair.png)
+
+*Collisions per route. The 5 on the control route in ON run 1 is trial 9, which
+followed trial 8 (stuck against the backpack for most of its 52 s). The cause
+is unexplained. A control-only ON check (5 trials) gave 0 collisions, and
+trial 9 of the rerun, which also followed a trial 8 with a collision, had 0.*
+
+## Findings
+
+- With perception on, collisions fell from 14 to 3 in the clean rerun, mostly
+  on the suitcase route (8 to 0).
+- The backpack NW-SE route (passes 0.15 m from the backpack) did not improve:
+  2 vs 3.
+- ON run 1 had start-up trouble (the runner started before the detector and
+  projector), one aborted trial (trial 1, 17 recoveries) and a stuck trial 8.
+  The rerun fixed start-up by waiting for the perception cloud and adding a
+  3 s pause between trials, and it did not reproduce the stuck trial. The
+  cause of that run-to-run difference is unexplained.
+- Perception costs about 1 s and 0.1 m per trial, and the simulator ran slower
+  (real-time factor about 0.75-0.87 vs 0.95).
 - The robot pitched 13.5 degrees until a front caster was added.
 - Stock YOLO11n gave false positives and low scores on simulated frames, so a
   single-class detector was fine-tuned on simulator-labelled renders.
 - The map shows walls and tall furniture but not the three objects below
   0.20 m, by design.
-- Low objects are static, so collisions are counted from a contact sensor, not
-  from object movement.
-- Labels come from Gazebo's bounding-box camera.
+- Detector labels come from Gazebo's bounding-box camera.
+
+## Limitations
+
+- A single room, with one set of textures.
+- Only static low objects.
+- 10 trials over 5 routes with one seed, so the counts are suggestive, not
+  statistically significant.
+- Goal tolerance is 0.15 m.
+- Collisions are counted by a Gazebo contact sensor with a 0.5 s debounce.
+- The detector's recall on low objects was only evaluated offline.
+- The simulation is software-rendered, on a CPU-only Mac in Docker.
 
 ## Demo
 
@@ -179,7 +218,7 @@ load-bearing: `numpy<2`, because `cv_bridge` is compiled against numpy 1.x, and
 | M1 | Robot in simulation, sensors publishing | done |
 | M2 | SLAM map, detector publishing detections | done |
 | M3 | Autonomous navigation to a goal, 3D projection | done |
-| M4 | Perception integrated into the costmap | done, checked by hand only |
+| M4 | Perception integrated into the costmap | done |
 | M5 | Experiment runner and metrics logging | done |
 | M6 | Experiments, analysis, write-up | in progress |
 

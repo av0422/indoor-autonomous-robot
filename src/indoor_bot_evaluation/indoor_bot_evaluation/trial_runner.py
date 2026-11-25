@@ -18,8 +18,9 @@ from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
 from ros_gz_interfaces.msg import Contacts
+from sensor_msgs.msg import PointCloud2
 from tf2_ros import Buffer, TransformException, TransformListener
 import yaml
 
@@ -30,6 +31,8 @@ SETTLE_S = 3.0
 CONTACT_DEBOUNCE_S = 0.5
 START_YAW_JITTER_RAD = math.radians(10.0)
 FLOOR_COLLISION_MARKER = 'ground_plane'
+CLOUD_WAIT_S = 300.0
+INTER_TRIAL_PAUSE_S = 3.0
 
 CSV_COLUMNS = [
     'trial', 'seed', 'condition', 'success', 'time_to_goal', 'path_length_m',
@@ -90,6 +93,7 @@ class TrialRunner(Node):
         self.amcl_updates = 0
         self.contact_msgs = 0
         self.contact_names = set()
+        self.cloud_msgs = 0
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
@@ -101,6 +105,8 @@ class TrialRunner(Node):
         self.create_subscription(
             PoseWithCovarianceStamped, '/amcl_pose', self.on_amcl_pose, amcl_qos)
         self.create_subscription(Contacts, '/contact', self.on_contact, 50)
+        self.create_subscription(
+            PointCloud2, '/perception/obstacle_cloud', self.on_cloud, qos_profile_sensor_data)
         self.initial_pose_pub = self.create_publisher(
             PoseWithCovarianceStamped, '/initialpose', 10)
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
@@ -134,6 +140,10 @@ class TrialRunner(Node):
             self.path_length_m += math.dist(xy, self.amcl_xy)
         self.amcl_xy = xy
         self.amcl_updates += 1
+
+    def on_cloud(self, msg):
+        """Count obstacle clouds so the run can wait for the perception pipeline."""
+        self.cloud_msgs += 1
 
     def on_contact(self, msg):
         """Count distinct contact episodes between the base and anything but the floor."""
@@ -253,6 +263,15 @@ class TrialRunner(Node):
         while self.now_s() <= 0.0:
             time.sleep(0.1)
 
+    def wait_for_cloud(self):
+        """Wait for one /perception/obstacle_cloud message; return False on timeout."""
+        start = self.now_s()
+        while self.cloud_msgs == 0:
+            if self.now_s() - start > CLOUD_WAIT_S:
+                return False
+            self.sleep_sim(0.5)
+        return True
+
     def run_trial(self, index):
         """Run one trial and return its CSV row as a dict."""
         pair_number = self.pair_index if self.pair_index >= 0 else index % len(self.pairs)
@@ -345,6 +364,11 @@ class TrialRunner(Node):
         output_dir = os.path.dirname(os.path.abspath(self.output))
         os.makedirs(output_dir, exist_ok=True)
         self.wait_for_stack()
+        if self.condition == 'on' and not self.wait_for_cloud():
+            self.get_logger().error(
+                f'No message on /perception/obstacle_cloud within {CLOUD_WAIT_S:.0f} s; '
+                'stopping the run')
+            return
         with open(self.output, 'a', newline='') as handle:
             writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS)
             if handle.tell() == 0:
@@ -359,6 +383,7 @@ class TrialRunner(Node):
                 self.get_logger().info(
                     f'Trial {index} raw /contact messages: {self.contact_msgs}, '
                     f'collision pairs seen: {sorted(self.contact_names)}')
+                self.sleep_sim(INTER_TRIAL_PAUSE_S)
 
 
 def main(args=None):

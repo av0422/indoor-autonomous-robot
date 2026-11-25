@@ -110,3 +110,44 @@ indoor_bot_perception. Fix: restrict the glob to *.py and *.sh, and
 delete scripts/__pycache__. Check: run a script, then rebuild; it must
 still finish with 7 packages.
 
+## Duplicate nodes cause "Moved/Jump back in time" TF warnings
+
+Two sims or two Nav2 stacks running at once cause "Moved/Jump back in time"
+TF warnings. Fix: pkill everything
+and check that `ros2 node list` is empty before launching.
+
+## /initialpose YAML: covariance must be inside the pose block
+
+In the `/initialpose` YAML the covariance must be inside the pose block, i.e.
+`pose: {pose: {position, orientation}, covariance: [...]}`.
+
+## Teleporting with gz service set_pose desyncs AMCL
+
+Moving the robot with `gz service ... set_pose` without resetting AMCL
+leaves the localisation out of step with the real pose; the scan looks
+tilted. Fix: reset the robot to the spawn pose and publish a corrected
+`/initialpose`.
+
+## ON run 1 start-up: trial runner started before the perception nodes
+
+In the first ON run the trial runner started before the detector and
+projector, so trials 0 and 1 ran with perception not ready (trial 0: 8
+recoveries; trial 1: aborted, 17 recoveries). Fix: in the ON condition the
+runner now waits for `/perception/obstacle_cloud` before trial 0, and in
+both conditions it pauses 3 s between trials.
+
+## Trial 9 anomaly in ON run 1: 5 collisions on the control route
+
+Trial 9 recorded 5 collisions on the control route, with 5829 raw contact
+messages. The only pair seen was the base against `low_backpack`, which is
+about 2 m from the route; the backpack is static. The preceding trial 8 had
+the robot stuck against the backpack (4594 raw contact messages). No
+teleport or AMCL warning was logged. A control-only ON check (5 trials) gave
+0 collisions. Cause: UNEXPLAINED. Carry-over from trial 8 is a hypothesis
+only.
+
+## git reset --hard origin/main removed unpushed results files
+
+`git reset --hard origin/main` on `main` removed from the working folder the
+results files that existed only in an unpushed local commit. They came back
+after checking out the branch that held the commit.
