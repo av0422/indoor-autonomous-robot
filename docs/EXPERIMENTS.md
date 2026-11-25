@@ -12,12 +12,12 @@ From `/ws` in the container, after `colcon build --symlink-install`:
 
 ```bash
 ros2 launch indoor_bot_bringup experiment.launch.py \
-    condition:=lidar_only trials:=20 seed:=1 output:=results/trials.csv
+    condition:=off trials:=10 seed:=1 output:=results/trials.csv
 ```
 
 | Argument | Default | Meaning |
 |---|---|---|
-| `condition` | `unspecified` | Label copied into the CSV. It does not switch anything: toggling perception is done separately (`/perception/set_enabled`) |
+| `condition` | `unspecified` | Label copied into the CSV. It does not switch anything: the OFF condition is run by not starting the detector and projector, and the ON condition by starting them. The value `on` additionally makes the runner wait for the perception cloud before trial 0 (see "Running the ON condition") |
 | `trials` | `4` | Number of trials |
 | `seed` | `0` | Seed for the start-yaw perturbation |
 | `pair_index` | `-1` | If 0 or more, every trial uses that pair of `goals.yaml` (0-based); `-1` cycles through the pairs |
@@ -28,6 +28,33 @@ The launch starts Gazebo, Nav2 and Foxglove (as `nav.launch.py`) and the
 takes `goals_file` (default: the installed `config/goals.yaml`) and `timeout_s`
 (default 90 simulated seconds) as parameters.
 
+### Running the ON condition
+
+`experiment.launch.py` does not start the detector or the projector. For the
+ON condition (`condition:=on`), start them yourself after the launch, from
+`/ws`, each in its own window and in this order.
+
+Detector:
+
+```bash
+cd /ws && source .venv/bin/activate && source install/setup.bash
+python3 src/indoor_bot_perception/indoor_bot_perception/detector_node.py --ros-args \
+  --params-file src/indoor_bot_perception/config/detector.yaml
+```
+
+Projector:
+
+```bash
+cd /ws && source /opt/ros/jazzy/setup.bash && source install/setup.bash
+python3 src/indoor_bot_perception/indoor_bot_perception/projector_node.py
+```
+
+With
+`condition:=on` the runner waits, before trial 0, for the first message on
+`/perception/obstacle_cloud`, for up to 300 s of simulated time. If none
+arrives it logs an error and stops without running any trial. Any other
+condition label skips this wait.
+
 ## Trial procedure
 
 1. Stop the robot, teleport it to the start pose with Gazebo's
@@ -36,6 +63,8 @@ takes `goals_file` (default: the installed `config/goals.yaml`) and `timeout_s`
 2. Send `NavigateToPose` to the goal and record until it finishes or
    `timeout_s` simulated seconds pass (the goal is then cancelled and the
    status is `TIMEOUT`).
+3. Write and flush the CSV row, then wait 3 simulated seconds (in every
+   condition) before the next trial starts, so contacts cannot carry over.
 
 Trial `i` uses pair `i mod 5` from `config/goals.yaml` unless `pair_index` is
 set. Pairs 0 to 3 are straight lines that each pass within 0.25 m of one low
@@ -75,8 +104,7 @@ those are from wall-clock seconds.
 reports SUCCEEDED once the robot is within 0.15 m of the goal (by its own
 localisation); `final_distance_error` is measured a moment later from the same
 localisation, so it can differ slightly, and it includes any AMCL error against
-the true pose. `docs/NAVIGATION.md` quotes a default tolerance of about 0.25 m; that
-does not match this file.
+the true pose.
 
 ## Contact sensor
 
