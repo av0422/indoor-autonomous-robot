@@ -51,5 +51,8 @@ question for the perception on/off experiment, not for this table.
   simulated world, not that it generalises to other rooms or real obstacles.
 - The test split has more empty frames (33 of 184) than train and validation,
   which affects precision.
-- The model has not yet been tested inside the navigation loop.
+- The model has since been used inside the   navigation loop, in the perception
+  ON/OFF experiment (10 trials per run, one seed, simulation only; see the
+  README). The live detector ran at confidence 0.5, not the 0.25 used for the
+  numbers above, so those numbers don't describe the running node exactly.
 - Single class: the detector says an obstacle is there, not what it is.
