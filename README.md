@@ -60,6 +60,35 @@ The perception and navigation halves communicate only through the topics defined
 documentation written after the fact. That decoupling is what lets the two halves be
 developed independently.
 
+## Perception pipeline
+
+**Data.** The training images are rendered in Gazebo: 1200 frames, split by
+episode into 840 train, 176 validation and 184 test. Labels come from Gazebo's
+bounding-box camera, not hand annotation. There is one class, `obstacle`.
+
+**Fine-tuning.** YOLO11n was fine-tuned at 320 px on CPU (MacBook Air M4,
+Docker), up to 40 epochs. On the test split (184 images, 405 boxes), recall rose
+from 0.20 for stock YOLO11n to 0.97, while precision fell from 0.95 to 0.86
+(same matching rule for both: conf 0.25, IoU 0.3). The detector finds 394 of 405
+obstacles instead of 80, at the cost of about 0.34 phantom boxes per image.
+Ultralytics' own validation gives mAP50 0.972 and mAP50-95 0.875; those are not
+comparable with the precision and recall figures above.
+
+**Detector node.** Runs the fine-tuned weights on CPU at confidence 0.5 (the
+offline numbers above were measured at 0.25). Latency is p50 23.8 ms for the
+model alone and 28.3 ms inside the ROS node, measured on the M4.
+
+**Projector node.** Matches each detection to the depth image by time, shrinks
+the box by 15% to avoid background pixels, keeps depths between 0.2 and 4.0 m,
+and back-projects the pixels with the camera intrinsics. The result is published
+as a point cloud on `/perception/obstacle_cloud`, which Nav2's costmap reads as a
+second observation source. With no detections it publishes an empty cloud.
+
+**Limits.** One room, one set of textures and lighting: the scores show the model
+learned this simulated world, not that it generalises. The detector is single
+class. The projector can include background points inside a box; this was not
+measured.
+
 ## Stack
 
 | Component | Choice |
